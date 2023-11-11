@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-
 from .error import NumberOfElementError, OverCorrection
 from .models import DataArray, NUMERICS
 from .fits import Fits

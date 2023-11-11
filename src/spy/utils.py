@@ -30,7 +30,7 @@ class Fixer:
         return path
 
     @classmethod
-    def outputs(cls, output: Optional[str], fits_array) -> List[str]:
+    def outputs(cls, output: Optional[str], fits_array) -> List[Optional[str]]:
         """
         Replaces parent directory of the given `fits_array` with the given
         directory `output`. If output is None it will create a temporary one
@@ -51,7 +51,8 @@ class Fixer:
             `list` of file paths
         """
         if output is None or not Path(output).is_dir():
-            output = tempfile.mkdtemp(prefix="spy_")
+            return [None] * len(fits_array)
+
         to_write = []
         for fits in fits_array:
             f = fits.file

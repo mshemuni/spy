@@ -8,6 +8,7 @@ pandas
 photutils
 python_dateutil
 sep
+typing_extensions
 pytest
 pytest-cov
 mypy
