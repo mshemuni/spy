@@ -1,0 +1,627 @@
+import unittest
+
+from astropy.nddata import CCDData
+from sep import Background
+
+from spy import Fits
+import pandas as pd
+import numpy as np
+
+from astropy.io.fits.header import Header
+
+from spy.error import NothingToDo, OverCorrection, NumberOfElementError
+
+
+class TestFits(unittest.TestCase):
+    def setUp(self):
+        self.SAMPLE = Fits.sample()
+
+    def test___str__(self):
+        string = str(self.SAMPLE)
+
+        self.assertTrue(string.endswith("')"))
+        self.assertTrue(string.startswith(f"{self.SAMPLE.__class__.__name__}"))
+
+    def test___repr__(self):
+        string = repr(self.SAMPLE)
+
+        self.assertTrue(string.endswith("')"))
+        self.assertTrue(
+            string.startswith(f"{self.SAMPLE.__class__.__name__}.from_path"))
+
+    def test_file_does_not_exist(self):
+        with self.assertRaises(FileNotFoundError):
+            _ = Fits.from_path("TEST")
+
+    def test_header(self):
+        headers = self.SAMPLE.header()
+        self.assertIsInstance(headers, pd.DataFrame)
+
+        for each in [
+            "SIMPLE", "BITPIX", "NAXIS",
+            "NAXIS1", "NAXIS2"
+        ]:
+            self.assertIn(each, headers.columns)
+
+    def test_data(self):
+        data = self.SAMPLE.data()
+        self.assertIsInstance(data, np.ndarray)
+
+    def test_pure_header(self):
+        pure_header = self.SAMPLE.pure_header()
+        self.assertIsInstance(pure_header, Header)
+
+        for each in [
+            "SIMPLE", "BITPIX", "NAXIS",
+            "NAXIS1", "NAXIS2"
+        ]:
+            self.assertIn(each, pure_header)
+
+    def test_ccd(self):
+        ccd = self.SAMPLE.ccd()
+        self.assertIsInstance(ccd, CCDData)
+        np.testing.assert_array_equal(ccd.data, self.SAMPLE.data())
+
+    def test_imstat(self):
+        imstat = self.SAMPLE.imstat()
+        self.assertIsInstance(imstat, pd.DataFrame)
+
+        for each in ["npix", "mean", "stddev", "min", "max"]:
+            self.assertIn(each, imstat.columns)
+
+    def test_cosmic_clean(self):
+        cleaned = self.SAMPLE.cosmic_clean()
+        self.assertIsInstance(cleaned, Fits)
+
+    def test_hedit(self):
+        self.SAMPLE.hedit("MSH", "TEST")
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+        self.assertEqual(header["MSH"].values, ["TEST"])
+
+    def test_hedit_list(self):
+        self.SAMPLE.hedit(["MSH1", "MSH2"], ["TEST1", "TEST2"])
+        header = self.SAMPLE.header()
+
+        for each in ["MSH1", "MSH2"]:
+            self.assertIn(each, header.columns)
+
+        for key, value in zip(["MSH1", "MSH2"], ["TEST1", "TEST2"]):
+            self.assertEqual(header[key].values, [value])
+
+    def test_hedit_no_value(self):
+        with self.assertRaises(NothingToDo):
+            self.SAMPLE.hedit("MSH")
+
+    def test_hedit_no_value_list(self):
+        with self.assertRaises(NothingToDo):
+            self.SAMPLE.hedit(["MSH1", "MSH2"])
+
+    def test_hedit_value_key_different(self):
+        with self.assertRaises(ValueError):
+            self.SAMPLE.hedit(["MSH1", "MSH2"], "TEST")
+
+    def test_hedit_key_value_different(self):
+        with self.assertRaises(ValueError):
+            self.SAMPLE.hedit("MSH", ["TEST1", "TEST2"])
+
+    def test_hedit_key_value_different_length(self):
+        with self.assertRaises(ValueError):
+            self.SAMPLE.hedit(
+                ["MSH1", "MSH2", "MSH3"],
+                ["TEST1", "TEST2"]
+            )
+
+    def test_hedit_value_key_different_length(self):
+        with self.assertRaises(ValueError):
+            self.SAMPLE.hedit(
+                ["MSH1", "MSH2"],
+                ["TEST1", "TEST2", "TEST3"]
+            )
+
+    def test_hedit_delete(self):
+        self.SAMPLE.hedit("MSH", "TEST")
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+        self.assertEqual(header["MSH"].values, ["TEST"])
+
+        self.SAMPLE.hedit("MSH", delete=True)
+        new_header = self.SAMPLE.header()
+        self.assertNotIn("MSH", new_header.columns)
+        self.assertEqual(header["MSH"].values, ["TEST"])
+
+    def test_save_as(self):
+        new_file = self.SAMPLE.save_as("TEST.fits")
+        self.assertIsInstance(new_file, Fits)
+        new_file.file.unlink()
+
+    def test_save_as_already_exist(self):
+        new_file = self.SAMPLE.save_as("TEST.fits")
+        self.assertIsInstance(new_file, Fits)
+        with self.assertRaises(FileExistsError):
+            _ = self.SAMPLE.save_as("TEST.fits")
+        new_file.file.unlink()
+
+    def test_add(self):
+        new_fits = self.SAMPLE.add(self.SAMPLE)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test_add_numeric_int(self):
+        new_fits = self.SAMPLE.add(2)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() + 2)
+
+    def test_add_numeric_float(self):
+        new_fits = self.SAMPLE.add(2.5)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() + 2.5)
+
+    def test_add_value_error(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.add("2")
+
+    def test_sub(self):
+        new_fits = self.SAMPLE.sub(self.SAMPLE)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 0)
+
+    def test_sub_numeric_int(self):
+        new_fits = self.SAMPLE.sub(2)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() - 2)
+
+    def test_sub_numeric_float(self):
+        new_fits = self.SAMPLE.sub(2.5)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() - 2.5)
+
+    def test_sub_value_error(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.sub("2")
+
+    def test_mul(self):
+        new_fits = self.SAMPLE.mul(self.SAMPLE)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test_mul_numeric_int(self):
+        new_fits = self.SAMPLE.mul(2)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test_mul_numeric_float(self):
+        new_fits = self.SAMPLE.mul(2.5)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() * 2.5)
+
+    def test_mul_value_error(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.mul("2")
+
+    def test_div(self):
+        new_fits = self.SAMPLE.div(self.SAMPLE)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / self.SAMPLE.data())
+
+    def test_div_numeric_int(self):
+        new_fits = self.SAMPLE.div(2)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() / 2)
+
+    def test_div_numeric_float(self):
+        new_fits = self.SAMPLE.div(2.5)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / 2.5)
+
+    def test_imarith_add(self):
+        new_fits = self.SAMPLE.imarith(self.SAMPLE, "+")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test_imarith_add_numeric_int(self):
+        new_fits = self.SAMPLE.imarith(2, "+")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() + 2)
+
+    def test_imarith_add_numeric_float(self):
+        new_fits = self.SAMPLE.imarith(2.5, "+")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() + 2.5)
+
+    def test_imarith_sub(self):
+        new_fits = self.SAMPLE.imarith(self.SAMPLE, "-")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 0)
+
+    def test_imarith_sub_numeric_int(self):
+        new_fits = self.SAMPLE.imarith(2, "-")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() - 2)
+
+    def test_imarith_sub_numeric_float(self):
+        new_fits = self.SAMPLE.imarith(2.5, "-")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() - 2.5)
+
+    def test_imarith_mul(self):
+        new_fits = self.SAMPLE.imarith(self.SAMPLE, "*")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test_imarith_mul_numeric_int(self):
+        new_fits = self.SAMPLE.imarith(2, "*")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test_imarith_mul_numeric_float(self):
+        new_fits = self.SAMPLE.imarith(2.5, "*")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() * 2.5)
+
+    def test_imarith_div(self):
+        new_fits = self.SAMPLE.imarith(self.SAMPLE, "/")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / self.SAMPLE.data())
+
+    def test_imarith_div_numeric_int(self):
+        new_fits = self.SAMPLE.imarith(2, "/")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() / 2)
+
+    def test_imarith_div_numeric_float(self):
+        new_fits = self.SAMPLE.imarith(2.5, "/")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / 2.5)
+
+    def test_imarith_bad_operand(self):
+        with self.assertRaises(ValueError):
+            self.SAMPLE.imarith(self.SAMPLE, "?")
+
+    def test_shift(self):
+        shifted = self.SAMPLE.shift(20, 10)
+        self.assertEqual(
+            self.SAMPLE.data()[123, 123],
+            shifted.data()[133, 143],
+        )
+
+    def test_align(self):
+        shifted = self.SAMPLE.shift(10, 10)
+        aligned = self.SAMPLE.align(shifted)
+        self.assertIsInstance(aligned, Fits)
+
+    def test_solve_field(self):
+        solved = self.SAMPLE.solve_filed()
+        self.assertIsInstance(solved, Fits)
+
+    def test_zero_correction(self):
+        zero_corrected = self.SAMPLE.zero_correction(self.SAMPLE)
+        self.assertIn("SPY_ZERO", zero_corrected.header().columns)
+        self.assertTrue(np.all(zero_corrected.data() == 0))
+
+    def test_zero_correction_over_correction(self):
+        zero_corrected = self.SAMPLE.zero_correction(self.SAMPLE)
+        with self.assertRaises(OverCorrection):
+            _ = zero_corrected.zero_correction(self.SAMPLE)
+
+    def test_zero_correction_over_correction_force(self):
+        zero_corrected = self.SAMPLE.zero_correction(self.SAMPLE)
+        double_zero_corrected = zero_corrected.zero_correction(
+            self.SAMPLE, force=True
+        )
+        np.testing.assert_array_equal(
+            double_zero_corrected.data(), self.SAMPLE.mul(-1).data()
+        )
+
+    def test_dark_correction(self):
+        dark_corrected = self.SAMPLE.dark_correction(self.SAMPLE)
+        self.assertIn("SPY_DARK", dark_corrected.header().columns)
+        self.assertTrue(np.all(dark_corrected.data() == 0))
+
+    def test_dark_correction_over_correction(self):
+        dark_corrected = self.SAMPLE.dark_correction(self.SAMPLE)
+        with self.assertRaises(OverCorrection):
+            _ = dark_corrected.dark_correction(self.SAMPLE)
+
+    def test_dark_correction_over_correction_force(self):
+        dark_corrected = self.SAMPLE.dark_correction(self.SAMPLE)
+        double_dark_corrected = dark_corrected.zero_correction(
+            self.SAMPLE, force=True
+        )
+        np.testing.assert_array_equal(
+            double_dark_corrected.data(), self.SAMPLE.mul(-1).data()
+        )
+
+    def test_flat_correction(self):
+        flat_corrected = self.SAMPLE.flat_correction(self.SAMPLE)
+        self.assertIn("SPY_FLAT", flat_corrected.header().columns)
+        flat_corrected_numpy = self.SAMPLE.data() / self.SAMPLE.data()
+        division = np.round(flat_corrected.data() / flat_corrected_numpy, 5)
+        self.assertTrue(np.all(division == division[0]))
+
+    def test_flat_correction_over_correction(self):
+        flat_corrected = self.SAMPLE.flat_correction(self.SAMPLE)
+        with self.assertRaises(OverCorrection):
+            _ = flat_corrected.flat_correction(self.SAMPLE)
+
+    def test_flat_correction_over_correction_force(self):
+        flat_corrected = self.SAMPLE.flat_correction(self.SAMPLE)
+        double_flat_corrected = flat_corrected.flat_correction(
+            self.SAMPLE, force=True
+        )
+
+        flat_corrected_numpy = self.SAMPLE.data() / self.SAMPLE.data() / self.SAMPLE.data()
+        division = np.round(
+            double_flat_corrected.data() / flat_corrected_numpy, 5)
+        self.assertTrue(np.all(division == division[0]))
+
+    def test_background(self):
+        background = self.SAMPLE.background()
+        self.assertIsInstance(background, Background)
+
+    def test_daofind(self):
+        sources = self.SAMPLE.daofind()
+        self.assertIsInstance(sources, pd.DataFrame)
+        for each in ["id", "xcentroid", "ycentroid", "sharpness", "roundness1",
+                     "roundness2", "npix", "sky", "peak", "flux", "mag"]:
+            self.assertIn(each, sources)
+
+    def test_extract(self):
+        sources = self.SAMPLE.extract()
+        self.assertIsInstance(sources, pd.DataFrame)
+        for each in ["xcentroid", "ycentroid"]:
+            self.assertIn(each, sources)
+
+    def test_phot_sep(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+
+    def test_phot_sep_exposure(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure="EXPOSURE"
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+
+    def test_phot_sep_exposure_does_not_exist(self):
+        sources = self.SAMPLE.extract()
+        with self.assertRaises(KeyError):
+            _ = self.SAMPLE.photometry_sep(
+                sources["xcentroid"], sources["ycentroid"], 10,
+                exposure="DOESNOTEXIST"
+            )
+
+    def test_phot_sep_exposure_numeric(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure=22
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+
+    def test_phot_sep_exposure_numeric_same_as_header(self):
+        sources = self.SAMPLE.extract()
+        ph_exptime = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure="EXPOSURE"
+        )
+        ph_65 = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure=65
+        )
+        pd.testing.assert_frame_equal(ph_exptime, ph_65)
+
+    def test_phot_sep_exposure_same_as_zero(self):
+        sources = self.SAMPLE.extract()
+        ph_exptime = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+        )
+        ph_0 = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure=0
+        )
+        pd.testing.assert_frame_equal(ph_exptime, ph_0)
+
+    def test_phot_sep_coordinates_same_as_numeric(self):
+        ph_list = self.SAMPLE.photometry_sep(
+            [1], [2], 10,
+        )
+        ph_numeric = self.SAMPLE.photometry_sep(
+            1, 2, 10,
+        )
+        pd.testing.assert_frame_equal(ph_list, ph_numeric)
+
+    def test_phot_sep_coordinates_same_as_numeric_mixed(self):
+        ph_list = self.SAMPLE.photometry_sep(
+            [1], 2, 10,
+        )
+        ph_numeric = self.SAMPLE.photometry_sep(
+            1, [2], 10,
+        )
+        pd.testing.assert_frame_equal(ph_list, ph_numeric)
+
+    def test_phot_sep_coordinates_not_equal(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.photometry_sep(
+                [1, 2], [2], 10,
+            )
+
+    def test_phot_sep_coordinates_not_equal_numeric(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.photometry_sep(
+                [1, 2], 1, 10,
+            )
+
+    def test_phot_sep_header(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers=["NAXIS1", "NAXIS2"]
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        for each in ["NAXIS1", "NAXIS2"]:
+            self.assertIn(each, ph.columns)
+
+    def test_phot_sep_single(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers="NAXIS1"
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertIn("NAXIS1", ph.columns)
+
+    def test_phot_sep_does_not_exits(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers=["DOESNOTEXIST1", "DOESNOTEXIST2"]
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST1"]))
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST2"]))
+
+    def test_phot_sep_does_not_exits_single(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers="DOESNOTEXIST"
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST"]))
+
+    def test_phot_sep_one_does_not_exits(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_sep(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers=["NAXIS", "DOESNOTEXIST1"]
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST1"]))
+        self.assertTrue(all(each is not None for each in ph["NAXIS"]))
+
+    def test_phot_phu(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+
+    def test_phot_phu_exposure(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure="EXPOSURE"
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+
+    def test_phot_phu_exposure_does_not_exist(self):
+        sources = self.SAMPLE.extract()
+        with self.assertRaises(KeyError):
+            _ = self.SAMPLE.photometry_phu(
+                sources["xcentroid"], sources["ycentroid"], 10,
+                exposure="DOESNOTEXIST"
+            )
+
+    def test_phot_phu_exposure_numeric(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure=22
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+
+    def test_phot_phu_exposure_numeric_same_as_header(self):
+        sources = self.SAMPLE.extract()
+        ph_exptime = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure="EXPOSURE"
+        )
+        ph_65 = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure=65
+        )
+        pd.testing.assert_frame_equal(ph_exptime, ph_65)
+
+    def test_phot_phu_exposure_same_as_zero(self):
+        sources = self.SAMPLE.extract()
+        ph_exptime = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+        )
+        ph_0 = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            exposure=0
+        )
+        pd.testing.assert_frame_equal(ph_exptime, ph_0)
+
+    def test_phot_phu_coordinates_same_as_numeric(self):
+        ph_list = self.SAMPLE.photometry_phu(
+            [1], [2], 10,
+        )
+        ph_numeric = self.SAMPLE.photometry_phu(
+            1, 2, 10,
+        )
+        pd.testing.assert_frame_equal(ph_list, ph_numeric)
+
+    def test_phot_phu_coordinates_same_as_numeric_mixed(self):
+        ph_list = self.SAMPLE.photometry_phu(
+            [1], 2, 10,
+        )
+        ph_numeric = self.SAMPLE.photometry_phu(
+            1, [2], 10,
+        )
+        pd.testing.assert_frame_equal(ph_list, ph_numeric)
+
+    def test_phot_phu_coordinates_not_equal(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.photometry_phu(
+                [1, 2], [2], 10,
+            )
+
+    def test_phot_phu_coordinates_not_equal_numeric(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.photometry_phu(
+                [1, 2], 1, 10,
+            )
+
+    def test_phot_phu_header(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers=["NAXIS1", "NAXIS2"]
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        for each in ["NAXIS1", "NAXIS2"]:
+            self.assertIn(each, ph.columns)
+
+    def test_phot_phu_single(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers="NAXIS1"
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertIn("NAXIS1", ph.columns)
+
+    def test_phot_phu_does_not_exits(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers=["DOESNOTEXIST1", "DOESNOTEXIST2"]
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST1"]))
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST2"]))
+
+    def test_phot_phu_does_not_exits_single(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers="DOESNOTEXIST"
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST"]))
+
+    def test_phot_phu_one_does_not_exits(self):
+        sources = self.SAMPLE.extract()
+        ph = self.SAMPLE.photometry_phu(
+            sources["xcentroid"], sources["ycentroid"], 10,
+            headers=["NAXIS", "DOESNOTEXIST1"]
+        )
+        self.assertIsInstance(ph, pd.DataFrame)
+        self.assertTrue(all(each is None for each in ph["DOESNOTEXIST1"]))
+        self.assertTrue(all(each is not None for each in ph["NAXIS"]))
+
+
+if __name__ == '__main__':
+    unittest.main()

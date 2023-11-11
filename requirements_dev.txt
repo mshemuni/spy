@@ -1,0 +1,16 @@
+astroalign
+astropy
+ccdproc
+matplotlib
+mpl_point_clicker
+numpy
+pandas
+photutils
+python_dateutil
+sep
+pytest
+pytest-cov
+mypy
+flake8
+tox
+tox-gh-actions

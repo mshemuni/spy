@@ -1,0 +1,10 @@
+astroalign
+astropy
+ccdproc
+matplotlib
+mpl_point_clicker
+numpy
+pandas
+photutils
+python_dateutil
+sep
