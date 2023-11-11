@@ -30,7 +30,7 @@ class Fixer:
         return path
 
     @classmethod
-    def outputs(cls, output: Optional[str], fits_array) -> List[Optional[str]]:
+    def outputs(cls, output: Optional[str], fits_array) -> Union[List[None], List[str]]:
         """
         Replaces parent directory of the given `fits_array` with the given
         directory `output`. If output is None it will create a temporary one

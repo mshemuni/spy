@@ -320,6 +320,10 @@ class FitsArray(DataArray):
         output_fits = Fixer.outputs(output, self)
         fits_array = []
         for fits, output_fit in zip(self, output_fits):
+
+            if output_fit is None:
+                continue
+
             copied = fits.save_as(output_fit)
             fits_array.append(copied)
 
