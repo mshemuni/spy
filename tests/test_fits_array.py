@@ -3,7 +3,7 @@ import unittest
 from astropy.nddata import CCDData
 from sep import Background
 
-from spy import FitsArray
+from spy import FitsArray, Fits
 import pandas as pd
 import numpy as np
 
@@ -1147,6 +1147,17 @@ class TestFitsArray(unittest.TestCase):
         self.assertIsInstance(ph, pd.DataFrame)
         self.assertTrue(all(each is None for each in ph["DOESNOTEXIST1"]))
         self.assertTrue(all(each is not None for each in ph["NAXIS"]))
+
+    def test_merge(self):
+        sample = FitsArray.sample()
+        sample.merge(self.SAMPLE)
+        self.assertEqual(len(sample), 20)
+
+    def test_append(self):
+        sample = FitsArray.sample()
+        fits = Fits.sample()
+        sample.append(fits)
+        self.assertEqual(len(sample), 11)
 
 
 if __name__ == '__main__':

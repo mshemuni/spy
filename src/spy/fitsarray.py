@@ -139,22 +139,27 @@ class FitsArray(DataArray):
                 pass
         return cls(fits_objects)
 
-    def append(self, other: FitsArray) -> Self:
+    def merge(self, other: FitsArray):
         """
-        Appends two `FitsArray`s to create another `FitsArray`
+        Merges two `FitsArray`s to create another `FitsArray`
 
         Parameters
         ----------
         other : FitsArray
             the other `FitsArray` to append to this one
-
-        Returns
-        -------
-        Self
-            a `FitsArray` object.
         """
-        file_list = self.fits_list + other.fits_list
-        return self.__class__(file_list)
+        self.fits_list.extend(other.fits_list)
+
+    def append(self, other: Fits) -> None:
+        """
+        Appends a `Fits` to a `FitsArray`
+
+        Parameters
+        ----------
+        other : Fits
+            the other `Fits` to append to `FitsArray`
+        """
+        self.fits_list.append(other)
 
     def header(self) -> pd.DataFrame:
         """
@@ -621,7 +626,7 @@ class FitsArray(DataArray):
         return self.__class__(fits_array)
 
     def shift(self, xs: Union[List[int], int], ys: Union[List[int], int],
-              output: Optional[str] = None, ):
+              output: Optional[str] = None) -> Self:
         """
         Shifts the data of `FitsArray` object
 
