@@ -22,6 +22,439 @@ class TestFitsArray(unittest.TestCase):
         self.assertTrue(string.endswith("')"))
         self.assertTrue(string.startswith(f"{self.SAMPLE.__class__.__name__}"))
 
+    def test___add__(self):
+        new_fits_array = self.SAMPLE + self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * 2
+            )
+
+    def test___add___single(self):
+        new_fits_array = self.SAMPLE + self.SAMPLE[0]
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + self.SAMPLE[0].data()
+            )
+
+    def test___add___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = self.SAMPLE + to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + added
+            )
+
+    def test___add___numeric_int_single(self):
+        new_fits_array = self.SAMPLE + 2
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + 2
+            )
+
+    def test___add___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE + to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + added
+            )
+
+    def test___add___numeric_float_single(self):
+        new_fits_array = self.SAMPLE + 2.5
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + 2.5
+            )
+
+    def test___add___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE + "2"
+
+    def test___add___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE + ["2"] * len(self.SAMPLE)
+
+    def test___radd__(self):
+        new_fits_array = self.SAMPLE + self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * 2
+            )
+
+    def test___radd___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = to_add + self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + added
+            )
+
+    def test___radd___numeric_int_single(self):
+        new_fits_array = 2 + self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + 2
+            )
+
+    def test___radd___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = to_add + self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + added
+            )
+
+    def test___radd___numeric_float_single(self):
+        new_fits_array = 2.5 + self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() + 2.5
+            )
+
+    def test___radd___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" + self.SAMPLE
+
+    def test___radd___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = ["2"] * len(self.SAMPLE) + self.SAMPLE
+
+    def test___sub__(self):
+        new_fits_array = self.SAMPLE - self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * 0
+            )
+
+    def test___sub___single(self):
+        new_fits_array = self.SAMPLE - self.SAMPLE[0]
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() - self.SAMPLE[0].data()
+            )
+
+    def test___sub___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = self.SAMPLE - to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() - added
+            )
+
+    def test___sub___numeric_int_single(self):
+        new_fits_array = self.SAMPLE - 2
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() - 2
+            )
+
+    def test___sub___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE - to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() - added
+            )
+
+    def test___sub___numeric_float_single(self):
+        new_fits_array = self.SAMPLE - 2.5
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() - 2.5
+            )
+
+    def test___sub___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE - "2"
+
+    def test___sub___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE - ["2"] * len(self.SAMPLE)
+
+    def test___rsub__(self):
+        new_fits_array = self.SAMPLE - self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * 0
+            )
+
+    def test___rsub___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = to_add - self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                added - fits.data()
+            )
+
+    def test___rsub___numeric_int_single(self):
+        new_fits_array = 2 - self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                2 - fits.data()
+            )
+
+    def test___rsub___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = to_add - self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                added - fits.data()
+            )
+
+    def test___rsub___numeric_float_single(self):
+        new_fits_array = 2.5 - self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                2.5 - fits.data()
+            )
+
+    def test___rsub___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" - self.SAMPLE
+
+    def test___rsub___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = ["2"] * len(self.SAMPLE) - self.SAMPLE
+
+    def test___mul__(self):
+        new_fits_array = self.SAMPLE * self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2
+            )
+
+    def test___mul___single(self):
+        new_fits_array = self.SAMPLE * self.SAMPLE[0]
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * self.SAMPLE[0].data()
+            )
+
+    def test___mul___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = self.SAMPLE * to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * added
+            )
+
+    def test___mul___numeric_int_single(self):
+        new_fits_array = self.SAMPLE * 2
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * 2
+            )
+
+    def test___mul___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE * to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * added
+            )
+
+    def test___mul___numeric_float_single(self):
+        new_fits_array = self.SAMPLE * 2.5
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() * 2.5
+            )
+
+    def test___mul___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE * "2"
+
+    def test___mul___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE * ["2"] * len(self.SAMPLE)
+
+    def test___rmul__(self):
+        new_fits_array = self.SAMPLE * self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2
+            )
+
+    def test___rmul___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = to_add * self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                added * fits.data()
+            )
+
+    def test___rmul___numeric_int_single(self):
+        new_fits_array = 2 * self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                2 * fits.data()
+            )
+
+    def test___rmul___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = to_add * self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                added * fits.data()
+            )
+
+    def test___rmul___numeric_float_single(self):
+        new_fits_array = 2.5 * self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                2.5 * fits.data()
+            )
+
+    def test___rmul___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" * self.SAMPLE
+
+    def test___rmul___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = ["2"] * len(self.SAMPLE) * self.SAMPLE
+
+    def test___div__(self):
+        new_fits_array = self.SAMPLE / self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / fits.data()
+            )
+
+    def test___div___single(self):
+        new_fits_array = self.SAMPLE / self.SAMPLE[0]
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / self.SAMPLE[0].data()
+            )
+
+    def test___div___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = self.SAMPLE / to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / added
+            )
+
+    def test___div___numeric_int_single(self):
+        new_fits_array = self.SAMPLE / 2
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / 2
+            )
+
+    def test___div___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE / to_add
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / added
+            )
+
+    def test___div___numeric_float_single(self):
+        new_fits_array = self.SAMPLE / 2.5
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / 2.5
+            )
+
+    def test___div___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE / "2"
+
+    def test___div___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE / ["2"] * len(self.SAMPLE)
+
+    def test___rdiv__(self):
+        new_fits_array = self.SAMPLE / self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() / fits.data()
+            )
+
+    def test___rdiv___numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = to_add / self.SAMPLE
+
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data().round(6),
+                (added / fits.data()).round(6)
+            )
+
+    def test___rdiv___numeric_int_single(self):
+        new_fits_array = 2 / self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                2 / fits.data()
+            )
+
+    def test___rdiv___numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = to_add / self.SAMPLE
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data().round(6),
+                (added / fits.data()).round(6)
+            )
+
+    def test___rdiv___numeric_float_single(self):
+        new_fits_array = 2.5 / self.SAMPLE
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data().round(6),
+                (2.5 / fits.data()).round(6)
+            )
+
+    def test___rdiv___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" / self.SAMPLE
+
+    def test___rdiv___list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = ["2"] * len(self.SAMPLE) / self.SAMPLE
+
     def test_file_does_not_exist(self):
         files = ["a", "b", "c"]
         with self.assertRaises(NumberOfElementError):
@@ -401,6 +834,64 @@ class TestFitsArray(unittest.TestCase):
         with self.assertRaises(NumberOfElementError):
             _ = self.SAMPLE.add(["2"] * len(self.SAMPLE))
 
+    def test_pow(self):
+        new_fits_array = self.SAMPLE.pow(self.SAMPLE)
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** fits.data()
+            )
+
+    def test_pow_single(self):
+        new_fits_array = self.SAMPLE.pow(self.SAMPLE[0])
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** self.SAMPLE[0].data()
+            )
+
+    def test_pow_numeric_int(self):
+        to_add = list(range(len(self.SAMPLE)))
+        new_fits_array = self.SAMPLE.pow(to_add)
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** added
+            )
+
+    def test_pow_numeric_int_single(self):
+        new_fits_array = self.SAMPLE.pow(2)
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2
+            )
+
+    def test_pow_numeric_float(self):
+        to_add = np.linspace(1, 0, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE.pow(to_add)
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** added
+            )
+
+    def test_pow_numeric_float_single(self):
+        new_fits_array = self.SAMPLE.pow(2.5)
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2.5
+            )
+
+    def test_pow_value_error(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.pow("2")
+
+    def test_pow_list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.pow(["2"] * len(self.SAMPLE))
+
     def test_imarith_add(self):
         new_fits_array = self.SAMPLE.imarith(self.SAMPLE, "+")
         for fits, new_fits in zip(self.SAMPLE, new_fits_array):
@@ -632,6 +1123,122 @@ class TestFitsArray(unittest.TestCase):
     def test_imarith_div_list_value_error(self):
         with self.assertRaises(NumberOfElementError):
             _ = self.SAMPLE.imarith(["2"] * len(self.SAMPLE), "/")
+
+    def test_imarith_pow(self):
+        new_fits_array = self.SAMPLE.imarith(self.SAMPLE, "**")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** fits.data()
+            )
+
+    def test_imarith_pow_single(self):
+        new_fits_array = self.SAMPLE.imarith(self.SAMPLE[0], "**")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** self.SAMPLE[0].data()
+            )
+
+    def test_imarith_pow_numeric_int(self):
+        to_add = list(range(1, len(self.SAMPLE) + 1))
+        new_fits_array = self.SAMPLE.imarith(to_add, "**")
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** added
+            )
+
+    def test_imarith_pow_numeric_int_single(self):
+        new_fits_array = self.SAMPLE.imarith(2, "**")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2
+            )
+
+    def test_imarith_pow_numeric_float(self):
+        to_add = np.linspace(2, 1, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE.imarith(to_add, "**")
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** added
+            )
+
+    def test_imarith_pow_numeric_float_single(self):
+        new_fits_array = self.SAMPLE.imarith(2.5, "**")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2.5
+            )
+
+    def test_imarith_pow_value_error(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.imarith("2", "**")
+
+    def test_imarith_pow_list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.imarith(["2"] * len(self.SAMPLE), "**")
+
+    def test_imarith_pow2(self):
+        new_fits_array = self.SAMPLE.imarith(self.SAMPLE, "^")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** fits.data()
+            )
+
+    def test_imarith_pow2_single(self):
+        new_fits_array = self.SAMPLE.imarith(self.SAMPLE[0], "^")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** self.SAMPLE[0].data()
+            )
+
+    def test_imarith_pow2_numeric_int(self):
+        to_add = list(range(1, len(self.SAMPLE) + 1))
+        new_fits_array = self.SAMPLE.imarith(to_add, "^")
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** added
+            )
+
+    def test_imarith_pow2_numeric_int_single(self):
+        new_fits_array = self.SAMPLE.imarith(2, "^")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2
+            )
+
+    def test_imarith_pow2_numeric_float(self):
+        to_add = np.linspace(2, 1, len(self.SAMPLE)).tolist()
+        new_fits_array = self.SAMPLE.imarith(to_add, "^")
+        for fits, new_fits, added in zip(self.SAMPLE, new_fits_array, to_add):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** added
+            )
+
+    def test_imarith_pow2_numeric_float_single(self):
+        new_fits_array = self.SAMPLE.imarith(2.5, "^")
+        for fits, new_fits in zip(self.SAMPLE, new_fits_array):
+            np.testing.assert_array_equal(
+                new_fits.data(),
+                fits.data() ** 2.5
+            )
+
+    def test_imarith_pow2_value_error(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.imarith("2", "^")
+
+    def test_imarith_pow2_list_value_error(self):
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.imarith(["2"] * len(self.SAMPLE), "^")
 
     def test_imarith_bad_operand(self):
         with self.assertRaises(NumberOfElementError):
@@ -1153,11 +1760,21 @@ class TestFitsArray(unittest.TestCase):
         sample.merge(self.SAMPLE)
         self.assertEqual(len(sample), 20)
 
+    def test_merge_not_fits_array(self):
+        sample = FitsArray.sample()
+        with self.assertRaises(ValueError):
+            sample.merge(1)
+
     def test_append(self):
         sample = FitsArray.sample()
         fits = Fits.sample()
         sample.append(fits)
         self.assertEqual(len(sample), 11)
+
+    def test_append_not_fits(self):
+        sample = FitsArray.sample()
+        with self.assertRaises(ValueError):
+            sample.append(1)
 
 
 if __name__ == '__main__':

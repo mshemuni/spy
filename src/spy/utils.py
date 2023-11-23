@@ -193,7 +193,7 @@ class Check:
     @classmethod
     def operand(cls, operand: str) -> None:
         """
-        Checks if the operand is both string and one of `["+", "-", "*", "/"]`
+        Checks if the operand is both string and one of `["+", "-", "*", "/", "**", "^"]`
 
         Parameters
         ----------
@@ -207,7 +207,7 @@ class Check:
         Raises
         ------
         ValueError
-            when operand is not one of `["+", "-", "*", "/"]`
+            when operand is not one of `["+", "-", "*", "/", "**", "^"]`
         """
-        if operand not in ["+", "-", "*", "/"]:
+        if operand not in ["+", "-", "*", "/", "**", "^"]:
             raise ValueError("Operand can only be one of these: +, -, *, /")

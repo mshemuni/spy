@@ -29,6 +29,144 @@ class TestFits(unittest.TestCase):
         self.assertTrue(
             string.startswith(f"{self.SAMPLE.__class__.__name__}.from_path"))
 
+    def test___add__(self):
+        new_fits = self.SAMPLE + self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test___add___numeric_int(self):
+        new_fits = self.SAMPLE + 2
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() + 2)
+
+    def test___add___numeric_float(self):
+        new_fits = self.SAMPLE + 2.5
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() + 2.5)
+
+    def test___add___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE + "2"
+
+    def test___radd__(self):
+        new_fits = self.SAMPLE + self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test___radd___numeric_int(self):
+        new_fits = 2 + self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() + 2)
+
+    def test___radd___numeric_float(self):
+        new_fits = 2.5 + self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() + 2.5)
+
+    def test___radd___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" + self.SAMPLE
+
+    def test___sub__(self):
+        new_fits = self.SAMPLE - self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 0)
+
+    def test___sub___numeric_int(self):
+        new_fits = self.SAMPLE - 2
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() - 2)
+
+    def test___sub___numeric_float(self):
+        new_fits = self.SAMPLE - 2.5
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() - 2.5)
+
+    def test___sub___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE - "2"
+
+    def test___rsub__(self):
+        new_fits = self.SAMPLE - self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 0)
+
+    def test___rsub___numeric_int(self):
+        new_fits = 2 - self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), 2 - self.SAMPLE.data())
+
+    def test___rsub___numeric_float(self):
+        new_fits = 2.5 - self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(),
+                                      2.5 - self.SAMPLE.data())
+
+    def test___rsub___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" - self.SAMPLE
+
+    def test___mul__(self):
+        new_fits = self.SAMPLE * self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test___mul___numeric_int(self):
+        new_fits = self.SAMPLE * 2
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
+
+    def test___mul___numeric_float(self):
+        new_fits = self.SAMPLE * 2.5
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() * 2.5)
+
+    def test___mul___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE * "2"
+
+    def test___rmul__(self):
+        new_fits = self.SAMPLE * self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test___rmul___numeric_int(self):
+        new_fits = 2 * self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), 2 * self.SAMPLE.data())
+
+    def test___rmul___numeric_float(self):
+        new_fits = 2.5 * self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(),
+                                      2.5 * self.SAMPLE.data())
+
+    def test___rmul___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" * self.SAMPLE
+
+    def test___div__(self):
+        new_fits = self.SAMPLE / self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / self.SAMPLE.data())
+
+    def test___div___numeric_int(self):
+        new_fits = self.SAMPLE / 2
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() / 2)
+
+    def test___div___numeric_float(self):
+        new_fits = self.SAMPLE / 2.5
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / 2.5)
+
+    def test___div___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = self.SAMPLE / "2"
+
+    def test___rdiv__(self):
+        new_fits = self.SAMPLE / self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() / self.SAMPLE.data())
+
+    def test___rdiv___numeric_int(self):
+        new_fits = 2 / self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data(), 2 / self.SAMPLE.data())
+
+    def test___rdiv___numeric_float(self):
+        new_fits = 2.5 / self.SAMPLE
+        np.testing.assert_array_equal(new_fits.data().round(6),
+                                      (2.5 / self.SAMPLE.data()).round(6))
+
+    def test___rdiv___value_error(self):
+        with self.assertRaises(NotImplementedError):
+            _ = "2" / self.SAMPLE
+
     def test_file_does_not_exist(self):
         with self.assertRaises(FileNotFoundError):
             _ = Fits.from_path("TEST")
@@ -207,6 +345,20 @@ class TestFits(unittest.TestCase):
         np.testing.assert_array_equal(new_fits.data(),
                                       self.SAMPLE.data() / 2.5)
 
+    def test_pow(self):
+        new_fits = self.SAMPLE.pow(self.SAMPLE)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() ** self.SAMPLE.data())
+
+    def test_pow_numeric_int(self):
+        new_fits = self.SAMPLE.pow(2)
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test_pow_numeric_float(self):
+        new_fits = self.SAMPLE.pow(2.5)
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() ** 2.5)
+
     def test_imarith_add(self):
         new_fits = self.SAMPLE.imarith(self.SAMPLE, "+")
         np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() * 2)
@@ -259,6 +411,34 @@ class TestFits(unittest.TestCase):
         new_fits = self.SAMPLE.imarith(2.5, "/")
         np.testing.assert_array_equal(new_fits.data(),
                                       self.SAMPLE.data() / 2.5)
+
+    def test_imarith_pow(self):
+        new_fits = self.SAMPLE.imarith(self.SAMPLE, "**")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() ** self.SAMPLE.data())
+
+    def test_imarith_pow_numeric_int(self):
+        new_fits = self.SAMPLE.imarith(2, "**")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test_imarith_pow_numeric_float(self):
+        new_fits = self.SAMPLE.imarith(2.5, "**")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() ** 2.5)
+
+    def test_imarith_pow2(self):
+        new_fits = self.SAMPLE.imarith(self.SAMPLE, "^")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() ** self.SAMPLE.data())
+
+    def test_imarith_pow_numeric_int2(self):
+        new_fits = self.SAMPLE.imarith(2, "^")
+        np.testing.assert_array_equal(new_fits.data(), self.SAMPLE.data() ** 2)
+
+    def test_imarith_pow_numeric_float2(self):
+        new_fits = self.SAMPLE.imarith(2.5, "^")
+        np.testing.assert_array_equal(new_fits.data(),
+                                      self.SAMPLE.data() ** 2.5)
 
     def test_imarith_bad_operand(self):
         with self.assertRaises(ValueError):

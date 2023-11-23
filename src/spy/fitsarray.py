@@ -62,6 +62,55 @@ class FitsArray(DataArray):
     def __abs__(self) -> List[str]:
         return [str(fits.file.absolute()) for fits in self.fits_list]
 
+    def __add__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            raise NotImplementedError
+
+        return self.add(other)
+
+    def __radd__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
+
+        if not isinstance(other, (FitsArray, float, int, List)):
+            raise NotImplementedError
+
+        return self.add(other)
+
+    def __sub__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            raise NotImplementedError
+
+        return self.sub(other)
+
+    def __rsub__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, float, int, List)):
+            raise NotImplementedError
+
+        return self.mul(-1).add(other)
+
+    def __mul__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            raise NotImplementedError
+
+        return self.mul(other)
+
+    def __rmul__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, float, int, List)):
+            raise NotImplementedError
+
+        return self.mul(other)
+
+    def __truediv__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            raise NotImplementedError
+
+        return self.div(other)
+
+    def __rtruediv__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (FitsArray, float, int, List)):
+            raise NotImplementedError
+
+        return self.div(other).pow(-1)
+
     @classmethod
     def from_paths(cls, paths: List[str]) -> FitsArray:
         """
@@ -148,6 +197,9 @@ class FitsArray(DataArray):
         other : FitsArray
             the other `FitsArray` to append to this one
         """
+        if not isinstance(other, FitsArray):
+            raise ValueError(f"Other must be a {self.__class__.__name__}")
+
         self.fits_list.extend(other.fits_list)
 
     def append(self, other: Fits) -> None:
@@ -159,6 +211,9 @@ class FitsArray(DataArray):
         other : Fits
             the other `Fits` to append to `FitsArray`
         """
+        if not isinstance(other, Fits):
+            raise ValueError(f"Other must be a {self.__class__.__name__}")
+
         self.fits_list.append(other)
 
     def header(self) -> pd.DataFrame:
@@ -573,6 +628,56 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
+    def pow(self,
+            other: Union[
+                FitsArray, Fits, float, int, List[Union[Fits, float, int]]],
+            output: Optional[str] = None) -> Self:
+        """
+        Does Power operation on the `FitsArray` object
+
+
+        Notes
+        -----
+        It is able to raise numeric values, other `Fits`, list of numeric value or `FitsArray`
+
+        - If other is numeric each element of the matrix will be raised by the number.
+        - If other is another `Fits` elementwise power will be done.
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+
+
+        Parameters
+        ----------
+        other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]]
+            Either a `FitsArray` object, list of floats, list of integers,
+            `Fits` object, float, or integer
+        output: str
+            New path to save the files.
+
+        Returns
+        -------
+        Fits
+            New `FitsArray` object of saved fits files.
+
+        Raises
+        ------
+        NumberOfElementError
+            when the length of other is wrong
+        """
+
+        other_to_use = self.__prepare_arith(other)
+
+        fits_array = []
+        outputs = Fixer.outputs(output, self)
+        for fits, the_other, output_fit in zip(self, other_to_use, outputs):
+            try:
+                result = fits.pow(the_other, output_fit)
+                fits_array.append(result)
+            except Exception:
+                pass
+
+        return self.__class__(fits_array)
+
     def imarith(self, other: Union[
         FitsArray, Fits, float, int, List[Union[Fits, float, int]]
     ],
@@ -597,7 +702,7 @@ class FitsArray(DataArray):
             Either a `FitsArray` object, list of floats, list of integers,
             `Fits` object, float, or integer
         operand: str
-            operation as string. One of `["+", "-", "*", "/"]`
+            operation as string. One of `["+", "-", "*", "/", "**", "^"]`
         output: str
             New path to save the files.
 

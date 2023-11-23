@@ -59,6 +59,54 @@ class Fits(Data):
     def __abs__(self) -> str:
         return str(self.file.absolute())
 
+    def __add__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.add(other)
+
+    def __radd__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.add(other)
+
+    def __sub__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.sub(other)
+
+    def __rsub__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.mul(-1).add(other)
+
+    def __mul__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.mul(other)
+
+    def __rmul__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.mul(other)
+
+    def __truediv__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.div(other)
+
+    def __rtruediv__(self, other: Union[Fits, float, int]) -> Self:
+        if not isinstance(other, (Fits, float, int)):
+            raise NotImplementedError
+
+        return self.div(other).pow(-1)
+
     def flux_to_mag(self, flux: Union[int, float],
                     flux_error: Union[int, float],
                     exptime: Union[int, float]
@@ -691,6 +739,54 @@ class Fits(Data):
             output=output, override=override
         )
 
+    def pow(self, other: Union[Fits, float, int], output: Optional[str] = None,
+            override: bool = False) -> Self:
+        """
+        Does Power operation on the `Fits` object
+
+        Notes
+        -----
+        It is able to power to numeric values as other `Fits`
+
+        - If other is numeric each element of the matrix will be raised by the number.
+        - If other is another `Fits` elementwise power will be done.
+
+
+        Parameters
+        ----------
+        other: Union[Fits, float, int]
+            Either a `Fits` object, float, or integer
+        output: str
+            New path to save the file.
+        override: bool, default=False
+            If True will overwrite the new_path if a file is already exists.
+
+        Returns
+        -------
+        Self
+            New `Fits` object of saved fits file.
+
+        Raises
+        ------
+        FileExistsError
+            when the file does exist and `override` is `False`
+        """
+        if not isinstance(other, (float, int, self.__class__)):
+            raise ValueError(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
+
+        if isinstance(other, (float, int)):
+            new_data = self.data() ** other
+        else:
+            new_data = self.data() ** other.data()
+
+        return self.__class__.from_data_header(
+            new_data, header=self.pure_header(),
+            output=output, override=override
+        )
+
     def imarith(self, other: Union[Fits, float, int],
                 operand: str,
                 output: Optional[str] = None,
@@ -727,7 +823,7 @@ class Fits(Data):
         ValueError
             when the given value is not `Fits`, `float`, or `int`
         ValueError
-            when operand is not one of `["+", "-", "*", "/"]`
+            when operand is not one of `["+", "-", "*", "/", "**", "^"]`
         """
 
         if not isinstance(other, (float, int, self.__class__)):
@@ -744,6 +840,8 @@ class Fits(Data):
             return self.sub(other, output=output, override=override)
         elif operand == "*":
             return self.mul(other, output=output, override=override)
+        elif operand in ("**", "^"):
+            return self.pow(other, output=output, override=override)
         else:
             return self.div(other, output=output, override=override)
 
