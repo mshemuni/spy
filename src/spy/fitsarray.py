@@ -3,11 +3,17 @@ from __future__ import annotations
 from .error import NumberOfElementError, OverCorrection
 from .models import DataArray, NUMERICS
 from .fits import Fits
+from .utils import Fixer, Check
+
+from logging import getLogger, Logger
 
 from glob import glob
 
 import pandas as pd
+import numpy as np
+
 from astropy.nddata import CCDData
+from ccdproc import Combiner
 from astropy.visualization import ZScaleInterval
 from matplotlib import pyplot as plt, animation
 from sep import Background
@@ -19,11 +25,11 @@ from typing import List, Union, Any, Optional, Iterator, Hashable, Dict
 
 from astropy.io.fits.header import Header
 
-from .utils import Fixer
-
 
 class FitsArray(DataArray):
-    def __init__(self, fits_list: List[Fits]) -> None:
+    def __init__(self, fits_list: List[Fits], logger: Optional[Logger] = None) -> None:
+
+        self.logger = getLogger(f"{self.__class__.__name__}") if logger is None else logger
 
         fits_list = [
             each
@@ -32,6 +38,7 @@ class FitsArray(DataArray):
         ]
 
         if len(fits_list) < 1:
+            self.logger.error("No image was provided")
             raise NumberOfElementError("No image was provided")
 
         self.fits_list = fits_list
@@ -51,6 +58,7 @@ class FitsArray(DataArray):
         elif isinstance(key, slice):
             return FitsArray(self.fits_list[key])
 
+        self.logger.error("Wrong slice")
         raise ValueError("Wrong slice")
 
     def __delitem__(self, key) -> None:
@@ -64,6 +72,7 @@ class FitsArray(DataArray):
 
     def __add__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.add(other)
@@ -71,42 +80,49 @@ class FitsArray(DataArray):
     def __radd__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
 
         if not isinstance(other, (FitsArray, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
     def __sub__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.sub(other)
 
     def __rsub__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.mul(-1).add(other)
 
     def __mul__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
     def __rmul__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
     def __truediv__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, Fits, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.div(other)
 
     def __rtruediv__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
         if not isinstance(other, (FitsArray, float, int, List)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.div(other).pow(-1)
@@ -197,7 +213,10 @@ class FitsArray(DataArray):
         other : FitsArray
             the other `FitsArray` to append to this one
         """
+        self.logger.info("Merging")
+
         if not isinstance(other, FitsArray):
+            self.logger.error(f"Other must be a {self.__class__.__name__}")
             raise ValueError(f"Other must be a {self.__class__.__name__}")
 
         self.fits_list.extend(other.fits_list)
@@ -211,7 +230,10 @@ class FitsArray(DataArray):
         other : Fits
             the other `Fits` to append to `FitsArray`
         """
+        self.logger.info("Appending")
+
         if not isinstance(other, Fits):
+            self.logger.error(f"Other must be a {self.__class__.__name__}")
             raise ValueError(f"Other must be a {self.__class__.__name__}")
 
         self.fits_list.append(other)
@@ -225,6 +247,8 @@ class FitsArray(DataArray):
         pd.DataFrame
             the headers as dataframe
         """
+        self.logger.info("Getting header")
+
         return pd.concat(
             (
                 each.header()
@@ -241,10 +265,45 @@ class FitsArray(DataArray):
         List[Any]
             the list of data as `np.ndarray`
         """
-        return [
-            each.data()
-            for each in self
-        ]
+        self.logger.info("Getting data")
+
+        data = []
+
+        for each in self:
+            try:
+                data.append(each.data())
+            except ValueError:
+                pass
+
+        return data
+
+    def value(self, x: int, y: int) -> pd.DataFrame:
+        """
+        Returns a table of values of asked coordinate
+
+        Parameters
+        ----------
+        x : int
+            x coordinate of asked pixel
+        y: int
+            y coordinate of asked pixel
+        Returns
+        -------
+        pd.DataFrame
+            table of values of asked coordinate
+        """
+
+        data = []
+        for fits in self:
+            try:
+                value = fits.value(x, y)
+                data.append([fits.file.name, value])
+            except IndexError:
+                pass
+
+        return pd.DataFrame(
+            data, columns=["image", "value"]
+        ).set_index("image")
 
     def pure_header(self) -> List[Header]:
         """
@@ -255,10 +314,14 @@ class FitsArray(DataArray):
         Header
             the list of Header object of the files
         """
-        return [
-            each.pure_header()
-            for each in self
-        ]
+        self.logger.info("Getting header (as an astropy header object)")
+
+        data = []
+
+        for each in self:
+            data.append(each.pure_header())
+
+        return data
 
     def ccd(self) -> List[CCDData]:
         """
@@ -269,10 +332,14 @@ class FitsArray(DataArray):
         CDDData
             the list of CCDData of the files
         """
-        return [
-            each.ccd()
-            for each in self
-        ]
+        self.logger.info("Getting CCDData")
+
+        data = []
+
+        for each in self:
+            data.append(each.ccd())
+
+        return data
 
     def imstat(self) -> pd.DataFrame:
         """
@@ -293,6 +360,8 @@ class FitsArray(DataArray):
         pd.DataFrame
             the statistics as dataframe
         """
+        self.logger.info("Calculating image statistics")
+
         return pd.concat(
             [
                 each.imstat()
@@ -320,6 +389,8 @@ class FitsArray(DataArray):
             Adds value of the key given in values if True. Would be ignored if
             delete is True.
         """
+        self.logger.info("Editing header")
+
         for fits in self:
             try:
                 fits.hedit(keys, values=values, delete=delete,
@@ -343,6 +414,8 @@ class FitsArray(DataArray):
         pd.DataFrame
             header values of give keys as data frame
         """
+        self.logger.info("Returning selected headers")
+
         if isinstance(fields, str):
             fields = [fields]
 
@@ -377,6 +450,8 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the number of fits files is 0
         """
+        self.logger.info("Saving all fits to as")
+
         output_fits = Fixer.outputs(output, self)
         fits_array = []
         for fits, output_fit in zip(self, output_fits):
@@ -388,6 +463,29 @@ class FitsArray(DataArray):
             fits_array.append(copied)
 
         return self.__class__(fits_array)
+
+    def __prepare_weights(self, weights: Optional[Union[List[str], List[Union[float, int]]]] = None):
+        if weights is None:
+            return None
+
+        if len(weights) != len(self):
+            raise NumberOfElementError("Number of Fits must be equal to number of weights")
+
+        weights_to_use = []
+        for fits, weight in zip(self, weights):
+            if isinstance(weight, str):
+                header = fits.header()
+                if weight in header:
+                    weights_to_use.append(header[weight].iloc[0])
+                else:
+                    raise ValueError("Header not available")
+
+            elif isinstance(weight, (float, int)):
+                weights_to_use.append(weight)
+            else:
+                raise ValueError("Weight must be either a header key or numeric value")
+
+        return weights_to_use
 
     def __prepare_arith(self,
                         other: Union[
@@ -415,6 +513,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Preparing for arithmetic operations")
 
         other_to_use: Union[FitsArray, list[Union[Fits, float, int]]]
 
@@ -464,6 +563,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Making addition operation")
 
         other_to_use = self.__prepare_arith(other)
 
@@ -514,6 +614,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Making subtraction operation")
 
         other_to_use = self.__prepare_arith(other)
 
@@ -564,6 +665,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Making multiplication operation")
 
         other_to_use = self.__prepare_arith(other)
 
@@ -614,6 +716,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Making division operation")
 
         other_to_use = self.__prepare_arith(other)
 
@@ -664,6 +767,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Making power operation")
 
         other_to_use = self.__prepare_arith(other)
 
@@ -716,6 +820,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the length of other is wrong
         """
+        self.logger.info("Making an arithmetic operation")
 
         other_to_use = self.__prepare_arith(other)
 
@@ -749,6 +854,8 @@ class FitsArray(DataArray):
         Self
             shifted `FitsArray` object
         """
+        self.logger.info("Shifting all images")
+
         if isinstance(xs, int):
             to_x_shift = [xs] * len(self)
 
@@ -807,15 +914,18 @@ class FitsArray(DataArray):
         Self
             `FitsArray` object of aligned images.
         """
+        self.logger.info("Aligning all images")
 
         if isinstance(reference, int):
             the_reference = self[reference]
         elif isinstance(reference, Fits):
             the_reference = reference
         else:
+            self.logger.error("other must be either an integer or a Fits")
             raise ValueError("other must be either an integer or a Fits")
 
         if isinstance(the_reference, FitsArray):
+            self.logger.error("Cannot be FitsArray")
             raise ValueError("Cannot be FitsArray")
 
         fits_array = []
@@ -836,6 +946,8 @@ class FitsArray(DataArray):
         """
         Creates the WCS headers
         """
+        self.logger.info("Solving field")
+
         return self
 
     def zero_correction(self, master_zero: Fits, output: Optional[str] = None,
@@ -857,6 +969,8 @@ class FitsArray(DataArray):
         Self
             Zero corrected `FitsArray` object
         """
+        self.logger.info("Making zero correction on the image")
+
         fits_array = []
         outputs = Fixer.outputs(output, self)
         for fits, output_fit in zip(self, outputs):
@@ -896,6 +1010,8 @@ class FitsArray(DataArray):
             Dark corrected `FitsArray` object
 
         """
+        self.logger.info("Making dark correction on the image")
+
         fits_array = []
         outputs = Fixer.outputs(output, self)
         for fits, output_fit in zip(self, outputs):
@@ -931,6 +1047,8 @@ class FitsArray(DataArray):
         Self
             Flat corrected `FitsArray` object
         """
+        self.logger.info("Making flat correction on the image")
+
         fits_array = []
         outputs = Fixer.outputs(output, self)
         for fits, output_fit in zip(self, outputs):
@@ -950,10 +1068,14 @@ class FitsArray(DataArray):
         """
         Returns a list of `Background` objects of the fits files.
         """
-        return [
-            fits.background()
-            for fits in self
-        ]
+        self.logger.info("Getting background")
+
+        data = []
+
+        for fits in self:
+            data.append(fits.background())
+
+        return data
 
     def daofind(self, index: int = 0, sigma: float = 3, fwhm: float = 3,
                 threshold: float = 5) -> pd.DataFrame:
@@ -984,6 +1106,8 @@ class FitsArray(DataArray):
         pd.DataFrame
             List of sources found on the image.
         """
+        self.logger.info("Extracting sources (daofind) from images")
+
         return self[index].daofind(sigma=sigma, fwhm=fwhm, threshold=threshold)
 
     def extract(self, index: int = 0, detection_sigma: float = 5,
@@ -1005,6 +1129,8 @@ class FitsArray(DataArray):
         pd.DataFrame
             List of sources found on the image.
         """
+        self.logger.info("Extracting sources (sep_extract) from images")
+
         return self[index].extract(
             detection_sigma=detection_sigma, min_area=min_area
         )
@@ -1039,6 +1165,8 @@ class FitsArray(DataArray):
         NumberOfElementError
             when `x` and `y` coordinates does not have the same length
         """
+        self.logger.info("Doing photometry (sep) on the image")
+
         photometry = []
         for fits in self:
             try:
@@ -1087,6 +1215,8 @@ class FitsArray(DataArray):
         NumberOfElementError
             when `x` and `y` coordinates does not have the same length
         """
+        self.logger.info("Doing photometry (photutils) on the image")
+
         photometry = []
         for fits in self:
             try:
@@ -1258,6 +1388,8 @@ class FitsArray(DataArray):
         Self
             Cleaned fits files
         """
+        self.logger.info("Cleaning the data")
+
         outputs = Fixer.outputs(output, self)
         clean_fits_array = []
         for fits, out_fit in zip(self, outputs):
@@ -1289,6 +1421,8 @@ class FitsArray(DataArray):
         interval: float, default=1
             The interval of the animation
         """
+        self.logger.info("Showing all images")
+
         fig = plt.figure()
 
         if scale:
@@ -1326,6 +1460,7 @@ class FitsArray(DataArray):
         Dict[Hashable, FitsArray]
             header keys and `FitsArray` pairs
         """
+        self.logger.info("Group images by headers")
 
         if isinstance(groups, str):
             groups = [groups]
@@ -1344,3 +1479,145 @@ class FitsArray(DataArray):
             grouped[keys] = FitsArray.from_paths(df.index.tolist())
 
         return grouped
+
+    def combine(self, method: str = "average", clipping: Optional[str] = None,
+                weights: Optional[List[Union[float, int]]] = None) -> Fits:
+        """
+        Combines FitsArray to a Fits
+
+        Parameters
+        ----------
+        method : str
+            method of combine. Either average, mean, or median
+        clipping: str, optional
+            clipping method (same as rejection in IRAF). Either sigmaclip or minmax
+        weights: float or int, optional
+            weights to be applied before combining. If None [1, ...] will be used.
+
+        Returns
+        -------
+        Fits
+            the combined `Fits`
+
+        Raises
+        ------
+        ValueError
+            when the number weight is not equal to number of fits files
+        ValueError
+            when the method is not either of average, mean, median, or sum
+        ValueError
+            when the clipping is not either of sigma, or minmax
+        """
+        Check.method(method)
+        Check.clipping(clipping)
+
+        combiner = Combiner(self.ccd())
+
+        if weights is None:
+            weights = [1] * len(self)
+
+        if len(weights) != len(self):
+            raise ValueError("Length of weights must be equal to number of Fits")
+
+        if clipping is not None:
+            if "sigma".startswith(clipping):
+                combiner.sigma_clipping()
+            else:
+                combiner.minmax_clipping()
+
+        combiner.weights = np.array(weights)
+
+        if "median".startswith(method.lower()):
+            return Fits.from_data_header(data=combiner.median_combine().data)
+        elif "sum".startswith(method.lower()):
+            return Fits.from_data_header(data=combiner.sum_combine().data)
+        else:
+            return Fits.from_data_header(data=combiner.average_combine().data)
+
+    def zero_combine(self, method: str = "median", clipping: Optional[str] = None) -> Fits:
+        """
+        Combines FitsArray to a Fits optimized for zero combining
+
+        Parameters
+        ----------
+        method : str
+            method of combine. Either average, mean, or median
+        clipping: str, optional
+            clipping method (same as rejection in IRAF). Either sigmaclip or minmax
+
+        Returns
+        -------
+        Fits
+            the combined `Fits`
+
+        Raises
+        ------
+        ValueError
+            when the method is not either of average, mean, median, or sum
+        ValueError
+            when the clipping is not either of sigma, or minmax
+        """
+        return self.combine(method=method, clipping=clipping)
+
+    def dark_combine(self, method: str = "median", clipping: Optional[str] = None,
+                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None) -> Fits:
+        """
+        Combines FitsArray to a Fits optimized for dark combining
+
+        Parameters
+        ----------
+        method : str
+            method of combine. Either average, mean, or median
+        clipping: str, optional
+            clipping method (same as rejection in IRAF). Either sigmaclip or minmax
+        weights: str, float, or int, optional
+            weights to be applied before combining. If None [1, ...] will be used.
+
+        Returns
+        -------
+        Fits
+            the combined `Fits`
+
+        Raises
+        ------
+        ValueError
+            when the number weight is not equal to number of fits files
+        ValueError
+            when the method is not either of average, mean, median, or sum
+        ValueError
+            when the clipping is not either of sigma, or minmax
+        """
+
+        fixed_weights = self.__prepare_weights(weights)
+        return self.combine(method=method, clipping=clipping, weights=fixed_weights)
+
+    def flat_combine(self, method: str = "median", clipping: Optional[str] = None,
+                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None) -> Fits:
+        """
+        Combines FitsArray to a Fits optimized for flat combining
+
+        Parameters
+        ----------
+        method : str
+            method of combine. Either average, mean, or median
+        clipping: str, optional
+            clipping method (same as rejection in IRAF). Either sigmaclip or minmax
+        weights: str, float, or int, optional
+            weights to be applied before combining. If None [1, ...] will be used.
+
+        Returns
+        -------
+        Fits
+            the combined `Fits`
+
+        Raises
+        ------
+        ValueError
+            when the number weight is not equal to number of fits files
+        ValueError
+            when the method is not either of average, mean, median, or sum
+        ValueError
+            when the clipping is not either of sigma, or minmax
+        """
+        fixed_weights = self.__prepare_weights(weights)
+        return self.combine(method=method, clipping=clipping, weights=fixed_weights)

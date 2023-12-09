@@ -5,6 +5,8 @@ from .error import NothingToDo, AlignError, NumberOfElementError, \
 from .models import Data, NUMERICS
 from .utils import Fixer, Check
 
+from logging import getLogger, Logger
+
 import math
 import shutil
 from typing import Optional, Union, List, Any, Tuple
@@ -37,22 +39,27 @@ from mpl_point_clicker import clicker
 
 
 class Fits(Data):
-    def __init__(self, file: Path) -> None:
+    def __init__(self, file: Path, logger: Optional[Logger] = None) -> None:
+
+        self.logger = getLogger(f"{self.__class__.__name__}") if logger is None else logger
 
         self.is_temp = False
-        if not file.exists():
-            raise FileNotFoundError("File does not exist")
         self.file = file
+
+        if not file.exists():
+            self.logger.error(f"The File ({self.file}) does not exist.")
+            raise FileNotFoundError("File does not exist")
+
         self.ZMag = 25
 
     def __str__(self) -> str:
         return f"{self.__class__.__name__}" \
                f"(@: '{id(self)}', path:'{self.file}')"
 
-    def __repr__(self):
+    def __repr__(self) -> str:
         return f"{self.__class__.__name__}.from_path('{self.file}')"
 
-    def __del__(self):
+    def __del__(self) -> None:
         if self.is_temp:
             self.file.unlink()
 
@@ -61,48 +68,56 @@ class Fits(Data):
 
     def __add__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
     def __radd__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
     def __sub__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.sub(other)
 
     def __rsub__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.mul(-1).add(other)
 
     def __mul__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
     def __rmul__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
     def __truediv__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.div(other)
 
     def __rtruediv__(self, other: Union[Fits, float, int]) -> Self:
         if not isinstance(other, (Fits, float, int)):
+            self.logger.error("Other must be either Fits, float or int")
             raise NotImplementedError
 
         return self.div(other).pow(-1)
@@ -145,6 +160,8 @@ class Fits(Data):
         ZeroDivisionError
             when the `flux` is `0`
         """
+        self.logger.info("Calculating Flux to Magnitude")
+
         mag = -2.5 * math.log10(flux)
         if exptime != 0:
             mag += 2.5 * math.log10(exptime)
@@ -234,7 +251,7 @@ class Fits(Data):
         header = fts.getheader(file)
         return cls.from_data_header(data, header=header)
 
-    def reset_zmag(self):
+    def reset_zmag(self) -> None:
         """
         Resets Zmag value to 25
 
@@ -247,6 +264,7 @@ class Fits(Data):
 
         Where :math:`ZMag` is Zero Magnitude, :math:`mag_c` is calculated magnitude
         """
+        self.logger.info("Resetting ZMag to 25")
         self.ZMag = 25
 
     def header(self) -> pd.DataFrame:
@@ -258,6 +276,8 @@ class Fits(Data):
         pd.DataFrame
             the headers as dataframe
         """
+        self.logger.info("Getting header")
+
         header = fts.getheader(abs(self))
         return pd.DataFrame(
             {i: header[i] for i in header if i}, index=[0]).assign(
@@ -278,11 +298,36 @@ class Fits(Data):
         ValueError
             if the fits file is not an image
         """
+        self.logger.info("Getting data")
+
         data = fts.getdata(abs(self))
         if not isinstance(data, np.ndarray):
-            raise ValueError("Unknown Fits type")
+            self.logger.error("Unknown Fits type")
+            raise ValueError("Unknown Fits type.  Maybe its a fits table and not an image.")
 
         return data.astype(float)
+
+    def value(self, x: int, y: int) -> float:
+        """
+        Returns a value of asked coordinate
+
+        Parameters
+        ----------
+        x : int
+            x coordinate of asked pixel
+        y: int
+            y coordinate of asked pixel
+        Returns
+        -------
+        float
+            value of the x and y
+
+        Raises
+        ------
+        IndexError
+            when the x, y coordinate is out of boundaries
+        """
+        return float(self.data()[x][y])
 
     def pure_header(self) -> Header:
         """
@@ -293,6 +338,8 @@ class Fits(Data):
         Header
             the Header object of the file
         """
+        self.logger.info("Getting header (as an astropy header object)")
+
         return fts.getheader(abs(self))
 
     def ccd(self) -> CCDData:
@@ -304,6 +351,8 @@ class Fits(Data):
         CDDData
             the CCDData of the file
         """
+        self.logger.info("Getting CCDData")
+
         return CCDData.read(self.file, unit="adu")
 
     def imstat(self) -> pd.DataFrame:
@@ -325,6 +374,8 @@ class Fits(Data):
         pd.DataFrame
             the statistics as dataframe
         """
+        self.logger.info("Calculating image statistics")
+
         data = self.data()
         return pd.DataFrame(
             [
@@ -445,6 +496,7 @@ class Fits(Data):
         Self
             Cleaned fits
         """
+        self.logger.info("Cleaning the data")
 
         cleaned_data, _ = cosmicray_lacosmic(
             self.data(), sigclip=sigclip,
@@ -487,6 +539,8 @@ class Fits(Data):
         Self
             The `Fits` object
         """
+        self.logger.info("Editing header")
+
         if delete:
             if isinstance(keys, str):
                 keys = [keys]
@@ -498,11 +552,14 @@ class Fits(Data):
 
         else:
             if values is None:
+                self.logger.error("Delete is False and Value is not given")
                 raise NothingToDo("Delete is False and Value is not given")
 
             if not isinstance(values, type(keys)):
+                self.logger.error("keys and values must have the same type (str or list)")
                 raise ValueError(
-                    "keys and values must have the same type (str or list)")
+                    "keys and values must have the same type (str or list)"
+                )
 
             if isinstance(keys, str):
                 keys = [keys]
@@ -511,8 +568,10 @@ class Fits(Data):
                 values = [values]
 
             if len(keys) != len(values):
+                self.logger.error("List of keys and values must be equal in length")
                 raise ValueError(
-                    "List of keys and values must be equal in length")
+                    "List of keys and values must be equal in length"
+                )
 
             with fts.open(abs(self), "update") as hdu:
                 for key, value in zip(keys, values):
@@ -544,6 +603,8 @@ class Fits(Data):
         FileExistsError
             when the file does exist and `override` is `False`
         """
+        self.logger.info("Saving the fits to as")
+
         new_output = Fixer.output(output=output, override=override)
         shutil.copy(self.file, new_output)
         return self.__class__.from_path(new_output)
@@ -579,7 +640,14 @@ class Fits(Data):
         FileExistsError
             when the file does exist and `override` is `False`
         """
+        self.logger.info("Making addition operation")
+
         if not isinstance(other, (float, int, self.__class__)):
+            self.logger.error(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
+
             raise ValueError(
                 f"Please provide either a {self.__class__} "
                 "Object or a numeric value"
@@ -627,7 +695,13 @@ class Fits(Data):
         FileExistsError
             when the file does exist and `override` is `False`
         """
+        self.logger.info("Making subtraction operation")
+
         if not isinstance(other, (float, int, self.__class__)):
+            self.logger.error(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
             raise ValueError(
                 f"Please provide either a {self.__class__} "
                 "Object or a numeric value"
@@ -675,7 +749,13 @@ class Fits(Data):
         FileExistsError
             when the file does exist and `override` is `False`
         """
+        self.logger.info("Making multiplication operation")
+
         if not isinstance(other, (float, int, self.__class__)):
+            self.logger.error(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
             raise ValueError(
                 f"Please provide either a {self.__class__} "
                 "Object or a numeric value"
@@ -723,7 +803,13 @@ class Fits(Data):
         FileExistsError
             when the file does exist and `override` is `False`
         """
+        self.logger.info("Making division operation")
+
         if not isinstance(other, (float, int, self.__class__)):
+            self.logger.error(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
             raise ValueError(
                 f"Please provide either a {self.__class__} "
                 "Object or a numeric value"
@@ -771,7 +857,13 @@ class Fits(Data):
         FileExistsError
             when the file does exist and `override` is `False`
         """
+        self.logger.info("Making power operation")
+
         if not isinstance(other, (float, int, self.__class__)):
+            self.logger.error(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
             raise ValueError(
                 f"Please provide either a {self.__class__} "
                 "Object or a numeric value"
@@ -825,8 +917,13 @@ class Fits(Data):
         ValueError
             when operand is not one of `["+", "-", "*", "/", "**", "^"]`
         """
+        self.logger.info("Making an arithmetic operation")
 
         if not isinstance(other, (float, int, self.__class__)):
+            self.logger.error(
+                f"Please provide either a {self.__class__} "
+                "Object or a numeric value"
+            )
             raise ValueError(
                 f"Please provide either a {self.__class__} "
                 "Object or a numeric value"
@@ -872,8 +969,10 @@ class Fits(Data):
         Self
             `Fits` object of aligned image.
         """
+        self.logger.info("Aligning the image")
 
         if not isinstance(reference, self.__class__):
+            self.logger.error(f"Other must be a {self.__class__}")
             raise ValueError(f"Other must be a {self.__class__}")
 
         try:
@@ -889,6 +988,7 @@ class Fits(Data):
                 output=output, override=override
             )
         except ValueError:
+            self.logger.error("Cannot align two images")
             raise AlignError("Cannot align two images")
 
     def show(self, scale: bool = True,
@@ -903,6 +1003,8 @@ class Fits(Data):
         sources: pd.DataFrame, optional
             Draws points on image if a list is given.
         """
+        self.logger.info("Showing the image")
+
         if scale:
             zscale = ZScaleInterval()
         else:
@@ -933,6 +1035,8 @@ class Fits(Data):
         pd.DataFrame
             List of coordinates selected.
         """
+        self.logger.info("Showing the image to pick some coordinates")
+
         if scale:
             zscale = ZScaleInterval()
         else:
@@ -959,6 +1063,8 @@ class Fits(Data):
         Self
             New `Fits` object that has WCS headers.
         """
+        self.logger.info("Solving field")
+
         return self
 
     def zero_correction(self, master_zero: Fits, output: Optional[str] = None,
@@ -988,6 +1094,8 @@ class Fits(Data):
             when the `Fits` object is already
             zero corrected and `force` is `False`
         """
+        self.logger.info("Making zero correction on the image")
+
         if "SPY_ZERO" not in self.header() or force:
             zero_corrected = subtract_bias(self.ccd(), master_zero.ccd())
             header = self.pure_header()
@@ -998,6 +1106,7 @@ class Fits(Data):
                 output=output, override=override
             )
 
+        self.logger.error("This Data is already zero corrected")
         raise OverCorrection("This Data is already zero corrected")
 
     def dark_correction(self, master_dark: Fits,
@@ -1031,6 +1140,8 @@ class Fits(Data):
             when the `Fits` object is already
             dark corrected and `force` is `False`
         """
+        self.logger.info("Making dark correction on the image")
+
         if "SPY_DARK" not in self.header() or force:
             if exposure is None:
                 options = {"dark_exposure": 1 * units.s,
@@ -1062,6 +1173,7 @@ class Fits(Data):
                 output=output, override=override
             )
 
+        self.logger.error("This Data is already dark corrected")
         raise OverCorrection("This Data is already dark corrected")
 
     def flat_correction(self, master_flat: Fits, output: Optional[str] = None,
@@ -1091,6 +1203,8 @@ class Fits(Data):
             when the `Fits` object is already
             flat corrected and `force` is `False`
         """
+        self.logger.info("Making flat correction on the image")
+
         if "SPY_FLAT" not in self.header() or force:
             flat_corrected = flat_correct(self.ccd(), master_flat.ccd())
             header = self.pure_header()
@@ -1101,12 +1215,15 @@ class Fits(Data):
                 output=output, override=override
             )
 
+        self.logger.error("This Data is already flat corrected")
         raise OverCorrection("This Data is already flat corrected")
 
     def background(self) -> Background:
         """
         Returns a `Background` object of the fits file.
         """
+        self.logger.info("Getting background")
+
         return Background(self.data())
 
     def daofind(self, sigma: float = 3, fwhm: float = 3,
@@ -1136,6 +1253,8 @@ class Fits(Data):
         pd.DataFrame
             List of sources found on the image.
         """
+        self.logger.info("Extracting sources (daofind) from images")
+
         mean, median, std = sigma_clipped_stats(self.data(), sigma=sigma)
         daofind = DAOStarFinder(fwhm=fwhm, threshold=threshold * std)
         sources = daofind(self.data() - median)
@@ -1168,6 +1287,8 @@ class Fits(Data):
         pd.DataFrame
             List of sources found on the image.
         """
+        self.logger.info("Extracting sources (sep_extract) from images")
+
         bkg = self.background()
         thresh = detection_sigma * bkg.globalrms
         sources = sep_extract(self.data() - bkg.back(), thresh,
@@ -1210,6 +1331,7 @@ class Fits(Data):
         NumberOfElementError
             when `x` and `y` coordinates does not have the same length
         """
+        self.logger.info("Doing photometry (sep) on the image")
 
         table = []
 
@@ -1299,6 +1421,8 @@ class Fits(Data):
         NumberOfElementError
             when `x` and `y` coordinates does not have the same length
         """
+        self.logger.info("Doing photometry (photutils) on the image")
+
         table = []
 
         the_header = self.header()
@@ -1429,6 +1553,8 @@ class Fits(Data):
         Self
             shifted `Fits` object
         """
+        self.logger.info("Shifting the image")
+
         shifted_data = np.roll(self.data(), x, axis=1)
         if x < 0:
             shifted_data[:, x:] = 0

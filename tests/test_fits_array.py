@@ -476,6 +476,11 @@ class TestFitsArray(unittest.TestCase):
         for data in list_of_data:
             self.assertIsInstance(data, np.ndarray)
 
+    def test_value(self):
+        data = self.SAMPLE.value(200, 200)
+        self.assertIsInstance(data, pd.DataFrame)
+        self.assertListEqual(data["value"].tolist(), [each.data()[200][200] for each in self.SAMPLE])
+
     def test_pure_header(self):
         list_of_pure_headers = self.SAMPLE.pure_header()
         self.assertIsInstance(list_of_pure_headers, list)
@@ -1775,6 +1780,30 @@ class TestFitsArray(unittest.TestCase):
         sample = FitsArray.sample()
         with self.assertRaises(ValueError):
             sample.append(1)
+
+    def test_combine_average(self):
+        combined = self.SAMPLE.combine(method="average")
+        self.assertIsInstance(combined, Fits)
+        np.testing.assert_array_equal(
+            combined.data(),
+            np.mean([each.data() for each in self.SAMPLE], axis=0),
+        )
+
+    def test_combine_mean(self):
+        combined = self.SAMPLE.combine(method="mean")
+        self.assertIsInstance(combined, Fits)
+        np.testing.assert_array_equal(
+            combined.data(),
+            np.mean([each.data() for each in self.SAMPLE], axis=0),
+        )
+
+    def test_combine_median(self):
+        combined = self.SAMPLE.combine(method="median")
+        self.assertIsInstance(combined, Fits)
+        np.testing.assert_array_equal(
+            combined.data(),
+            np.median([each.data() for each in self.SAMPLE], axis=0),
+        )
 
 
 if __name__ == '__main__':

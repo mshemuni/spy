@@ -210,4 +210,49 @@ class Check:
             when operand is not one of `["+", "-", "*", "/", "**", "^"]`
         """
         if operand not in ["+", "-", "*", "/", "**", "^"]:
-            raise ValueError("Operand can only be one of these: +, -, *, /")
+            raise ValueError("Operand can only be one of these: +, -, *, /, **, ^")
+
+    @classmethod
+    def method(cls, method: str) -> None:
+        """
+        Checks if the method is both string and one of `["average", "mean", "median", "sum"]`
+
+        Parameters
+        ----------
+        method : str
+            the method
+        Returns
+        -------
+         None
+
+
+        Raises
+        ------
+        ValueError
+            when method is not one of `["average", "mean", "median", "sum"]`
+        """
+        if method not in ["average", "mean", "median", "sum"]:
+            raise ValueError("Method can only be one of these: average, mean, median, sum")
+
+    @classmethod
+    def clipping(cls, method: Optional[str] = None) -> None:
+        """
+        Checks if the clipping is both string and one of `["sigma", "minmax"]`
+
+        Parameters
+        ----------
+        method : str
+            the method
+        Returns
+        -------
+         None
+
+
+        Raises
+        ------
+        ValueError
+            when method is not one of `["sigma", "minmax"]`
+        """
+        if method is not None:
+            if method not in ["sigma", "minmax"]:
+                raise ValueError("Method can only be one of these: sigma, minmax")

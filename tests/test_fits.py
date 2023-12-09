@@ -185,6 +185,15 @@ class TestFits(unittest.TestCase):
         data = self.SAMPLE.data()
         self.assertIsInstance(data, np.ndarray)
 
+    def test_value(self):
+        data = self.SAMPLE.value(20, 20)
+        self.assertIsInstance(data, float)
+        self.assertEqual(data, self.SAMPLE.data()[20][20])
+
+    def test_value_out_of_boundaries(self):
+        with self.assertRaises(IndexError):
+            _ = self.SAMPLE.value(65535, 65535)
+
     def test_pure_header(self):
         pure_header = self.SAMPLE.pure_header()
         self.assertIsInstance(pure_header, Header)
