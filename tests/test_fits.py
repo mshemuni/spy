@@ -1,6 +1,8 @@
+import math
 import unittest
 
 from astropy.nddata import CCDData
+from scipy.ndimage import rotate
 from sep import Background
 
 from spy import Fits
@@ -458,6 +460,14 @@ class TestFits(unittest.TestCase):
         self.assertEqual(
             self.SAMPLE.data()[123, 123],
             shifted.data()[133, 143],
+        )
+
+    def test_rotate(self):
+        rotated = self.SAMPLE.rotate(math.pi)
+        rotated_data = rotate(self.SAMPLE.data(), 180, reshape=False)
+
+        np.testing.assert_array_equal(
+            rotated.data(), rotated_data
         )
 
     def test_align(self):

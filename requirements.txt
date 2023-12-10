@@ -9,3 +9,4 @@ photutils
 python_dateutil
 sep
 typing_extensions
+scipy

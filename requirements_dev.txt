@@ -9,6 +9,7 @@ photutils
 python_dateutil
 sep
 typing_extensions
+scipy
 pytest
 pytest-cov
 mypy

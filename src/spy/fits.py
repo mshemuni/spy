@@ -22,6 +22,8 @@ from astropy.stats import sigma_clipped_stats
 from astropy.visualization import ZScaleInterval
 from photutils.detection import DAOStarFinder
 
+from scipy.ndimage import rotate
+
 import numpy as np
 import pandas as pd
 from pathlib import Path
@@ -66,58 +68,58 @@ class Fits(Data):
     def __abs__(self) -> str:
         return str(self.file.absolute())
 
-    def __add__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __add__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
-    def __radd__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __radd__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
-    def __sub__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __sub__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.sub(other)
 
-    def __rsub__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __rsub__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.mul(-1).add(other)
 
-    def __mul__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __mul__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
-    def __rmul__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __rmul__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
-    def __truediv__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __truediv__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.div(other)
 
-    def __rtruediv__(self, other: Union[Fits, float, int]) -> Self:
-        if not isinstance(other, (Fits, float, int)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __rtruediv__(self, other: Union[Self, float, int]) -> Self:
+        if not isinstance(other, (self.__class__, float, int)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, float or int")
             raise NotImplementedError
 
         return self.div(other).pow(-1)
@@ -394,7 +396,7 @@ class Fits(Data):
                      niter: int = 4, sepmed: bool = True,
                      cleantype: str = 'meanmask', fsmode: str = 'median',
                      psfmodel: str = 'gauss', psffwhm: float = 2.5,
-                     psfsize: int = 7, psfk: Any = None,
+                     psfsize: int = 7, psfk: Optional[Any] = None,
                      psfbeta: float = 4.765, gain_apply: bool = True) -> Self:
         """
         Clears cosmic rays from the fits file
@@ -516,7 +518,7 @@ class Fits(Data):
 
     def hedit(self, keys: Union[str, List[str]],
               values: Optional[Union[str, List[str]]] = None,
-              delete: Optional[bool] = False,
+              delete: bool = False,
               value_is_key: bool = False) -> Self:
         """
         Edits header of the given file.
@@ -1226,8 +1228,8 @@ class Fits(Data):
 
         return Background(self.data())
 
-    def daofind(self, sigma: float = 3, fwhm: float = 3,
-                threshold: float = 5) -> pd.DataFrame:
+    def daofind(self, sigma: float = 3.0, fwhm: float = 3.0,
+                threshold: float = 5.0) -> pd.DataFrame:
         """
         Runs daofind to detect sources on the image.
 
@@ -1270,8 +1272,8 @@ class Fits(Data):
             ]
         )
 
-    def extract(self, detection_sigma: float = 5,
-                min_area: float = 5) -> pd.DataFrame:
+    def extract(self, detection_sigma: float = 5.0,
+                min_area: float = 5.0) -> pd.DataFrame:
         """
         Runs astroalign._find_sources to detect sources on the image.
 
@@ -1569,3 +1571,28 @@ class Fits(Data):
 
         return self.from_data_header(shifted_data, self.pure_header(),
                                      output=output, override=override)
+
+    def rotate(self, angle: Union[float, int], reshape: bool = False, output: Optional[str] = None,
+               override: bool = False) -> Self:
+        """
+        Rotates the data of `Fits` object
+
+        Parameters
+        ----------
+        angle: float, int
+            rotation angle
+        reshape: bool, default=False
+            Reshape after rotate
+        output: str, optional
+            Path of the new fits file.
+        override: bool, default=False
+            If True will overwrite the output if a file is already exists.
+
+        Returns
+        -------
+        Self
+            rotated `Fits` object
+        """
+        angle_degree = angle * 180 / math.pi
+        data = rotate(self.data(), angle_degree, reshape=reshape)
+        return self.__class__.from_data_header(data, header=self.pure_header(), output=output, override=override)

@@ -1,6 +1,8 @@
+import math
 import unittest
 
 from astropy.nddata import CCDData
+from scipy.ndimage import rotate
 from sep import Background
 
 from spy import FitsArray, Fits
@@ -1258,6 +1260,23 @@ class TestFitsArray(unittest.TestCase):
             self.assertEqual(
                 fits.data()[123, 123],
                 shifted.data()[133, 143],
+            )
+
+    def test_rotate(self):
+        new_fits_array = self.SAMPLE.rotate(math.pi)
+        for fits, rotated in zip(self.SAMPLE, new_fits_array):
+            rotated_data = rotate(fits.data(), 180, reshape=False)
+            np.testing.assert_array_equal(
+                rotated.data(), rotated_data
+            )
+
+    def test_rotate_individual(self):
+        angles = list(each * math.pi / 180 for each in range(0, 180, 18))
+        new_fits_array = self.SAMPLE.rotate(angles)
+        for fits, rotated, angle in zip(self.SAMPLE, new_fits_array, angles):
+            rotated_data = rotate(fits.data(), angle * 180 / math.pi, reshape=False)
+            np.testing.assert_array_equal(
+                rotated.data(), rotated_data
             )
 
     def test_shift_numeric(self):

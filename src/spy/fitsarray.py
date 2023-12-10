@@ -70,65 +70,65 @@ class FitsArray(DataArray):
     def __abs__(self) -> List[str]:
         return [str(fits.file.absolute()) for fits in self.fits_list]
 
-    def __add__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, Fits, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __add__(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, Fits, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
-    def __radd__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
+    def __radd__(self, other: Union[Self, float, int, List[Union[Fits, float, int]]]) -> Self:
 
-        if not isinstance(other, (FitsArray, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+        if not isinstance(other, (self.__class__, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.add(other)
 
-    def __sub__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, Fits, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __sub__(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, Fits, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.sub(other)
 
-    def __rsub__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __rsub__(self, other: Union[Self, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.mul(-1).add(other)
 
-    def __mul__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, Fits, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __mul__(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, Fits, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
-    def __rmul__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __rmul__(self, other: Union[Self, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.mul(other)
 
-    def __truediv__(self, other: Union[FitsArray, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, Fits, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __truediv__(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, Fits, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.div(other)
 
-    def __rtruediv__(self, other: Union[FitsArray, float, int, List[Union[Fits, float, int]]]) -> Self:
-        if not isinstance(other, (FitsArray, float, int, List)):
-            self.logger.error("Other must be either Fits, float or int")
+    def __rtruediv__(self, other: Union[Self, float, int, List[Union[Fits, float, int]]]) -> Self:
+        if not isinstance(other, (self.__class__, float, int, List)):
+            self.logger.error(f"Other must be either {self.__class__.__name__}, Fits, float or int")
             raise NotImplementedError
 
         return self.div(other).pow(-1)
 
     @classmethod
-    def from_paths(cls, paths: List[str]) -> FitsArray:
+    def from_paths(cls, paths: List[str]) -> Self:
         """
         Create a `FitsArray` from paths as list of strings
 
@@ -154,10 +154,10 @@ class FitsArray(DataArray):
             except FileNotFoundError:
                 pass
 
-        return FitsArray(files)
+        return cls(files)
 
     @classmethod
-    def from_pattern(cls, pattern: str) -> FitsArray:
+    def from_pattern(cls, pattern: str) -> Self:
         """
         Create a `FitsArray` from patterns
 
@@ -176,7 +176,7 @@ class FitsArray(DataArray):
         NumberOfElementError
             when the number of fits files is 0
         """
-        return FitsArray.from_paths(glob(pattern))
+        return cls.from_paths(glob(pattern))
 
     @classmethod
     def sample(cls, numer_of_samples: int = 10) -> Self:
@@ -204,7 +204,7 @@ class FitsArray(DataArray):
                 pass
         return cls(fits_objects)
 
-    def merge(self, other: FitsArray):
+    def merge(self, other: Self) -> None:
         """
         Merges two `FitsArray`s to create another `FitsArray`
 
@@ -371,7 +371,7 @@ class FitsArray(DataArray):
 
     def hedit(self, keys: Union[str, List[str]],
               values: Optional[Union[str, List[str]]] = None,
-              delete: Optional[bool] = False,
+              delete: bool = False,
               value_is_key: bool = False) -> Self:
         """
         Edits header of the given files.
@@ -464,7 +464,9 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
-    def __prepare_weights(self, weights: Optional[Union[List[str], List[Union[float, int]]]] = None):
+    def __prepare_weights(self,
+                          weights: Optional[Union[List[str], List[Union[float, int]]]] = None
+                          ) -> Optional[List[Union[int, float]]]:
         if weights is None:
             return None
 
@@ -733,7 +735,7 @@ class FitsArray(DataArray):
 
     def pow(self,
             other: Union[
-                FitsArray, Fits, float, int, List[Union[Fits, float, int]]],
+                Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         """
         Does Power operation on the `FitsArray` object
@@ -888,8 +890,51 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
-    def align(self, reference: Optional[Union[Fits, int]] = 0,
-              output: Optional[str] = None,
+    def rotate(self, angle: Union[List[Union[float]], float, int], reshape: bool = False,
+               output: Optional[str] = None) -> Self:
+        """
+        Rotates the data of `FitsArray` object
+
+        Parameters
+        ----------
+        angle: Union[List[Union[float]], float, int]
+            Rotation angle(s)
+        reshape: bool, default=False
+            Reshape after rotate
+        output: str, optional
+            New path to save the files.
+
+        Returns
+        -------
+        Self
+            rotated `FitsArray` object
+        """
+        if isinstance(angle, (float, int)):
+            to_rotate = [angle] * len(self)
+
+        elif isinstance(angle, list):
+            to_rotate = angle
+        else:
+            raise ValueError("rotate must be either float or a list of float")
+
+        if len(to_rotate) != len(self):
+            raise NumberOfElementError("Number of rotate and Fits in "
+                                       "FitsArray must be equal")
+
+        fits_array = []
+        outputs = Fixer.outputs(output, self)
+
+        for fits, output_fit, ang in zip(self, outputs, to_rotate):
+
+            try:
+                rotated = fits.rotate(ang, reshape=reshape, output=output_fit)
+                fits_array.append(rotated)
+            except Exception:
+                pass
+
+        return self.__class__(fits_array)
+
+    def align(self, reference: Union[Fits, int] = 0, output: Optional[str] = None,
               max_control_points: int = 50, min_area: int = 5) -> Self:
         """
         Aligns the fits files with the given reference
@@ -1077,8 +1122,8 @@ class FitsArray(DataArray):
 
         return data
 
-    def daofind(self, index: int = 0, sigma: float = 3, fwhm: float = 3,
-                threshold: float = 5) -> pd.DataFrame:
+    def daofind(self, index: int = 0, sigma: float = 3.0, fwhm: float = 3.0,
+                threshold: float = 5.0) -> pd.DataFrame:
         """
         Runs daofind to detect sources on the image.
 
@@ -1110,8 +1155,8 @@ class FitsArray(DataArray):
 
         return self[index].daofind(sigma=sigma, fwhm=fwhm, threshold=threshold)
 
-    def extract(self, index: int = 0, detection_sigma: float = 5,
-                min_area: float = 5) -> pd.DataFrame:
+    def extract(self, index: int = 0, detection_sigma: float = 5.0,
+                min_area: float = 5.0) -> pd.DataFrame:
         """
         Runs astroalign._find_sources to detect sources on the image.
 
@@ -1286,7 +1331,7 @@ class FitsArray(DataArray):
                      niter: int = 4, sepmed: bool = True,
                      cleantype: str = 'meanmask', fsmode: str = 'median',
                      psfmodel: str = 'gauss', psffwhm: float = 2.5,
-                     psfsize: int = 7, psfk: Any = None,
+                     psfsize: int = 7, psfk: Any = Optional[Any],
                      psfbeta: float = 4.765, gain_apply: bool = True) -> Self:
         """
         Clears cosmic rays from the fits files
@@ -1410,7 +1455,7 @@ class FitsArray(DataArray):
 
         return self.__class__(clean_fits_array)
 
-    def show(self, scale: bool = True, interval: float = 1) -> None:
+    def show(self, scale: bool = True, interval: float = 1.0) -> None:
         """
         Shows the Images using matplotlib.
 
@@ -1446,7 +1491,7 @@ class FitsArray(DataArray):
 
     def group_by(self,
                  groups: Union[str, List[str]]
-                 ) -> Dict[Hashable, FitsArray]:
+                 ) -> Dict[Hashable, Self]:
         """
         Groups the `FitsArray` by given header
 
@@ -1476,7 +1521,7 @@ class FitsArray(DataArray):
 
         grouped = {}
         for keys, df in headers.fillna("N/A").groupby(groups, dropna=False):
-            grouped[keys] = FitsArray.from_paths(df.index.tolist())
+            grouped[keys] = self.__class__.from_paths(df.index.tolist())
 
         return grouped
 
