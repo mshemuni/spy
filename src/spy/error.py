@@ -14,5 +14,5 @@ class OverCorrection(Exception):
     """Raised when trying to correct a file multiple times"""
 
 
-class ValueNotFound(Exception):
-    """Raised when the key not found in the haeder"""
+class CardNotFound(Exception):
+    """Raised when the key not found in the header"""

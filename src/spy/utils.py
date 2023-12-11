@@ -8,8 +8,44 @@ from pathlib import Path, PurePath
 
 class Fixer:
 
-    @classmethod
-    def fitsify(cls, path: str) -> str:
+    @staticmethod
+    def key_value_pair(keys: Union[str, List[str]],
+                       values: Union[str, int, float, bool, List[Union[str, int, float, bool]]]
+                       ) -> Tuple[List[str], List[Union[str, float, int, bool]]]:
+        """
+        Corrects keys, values pair for hedit.
+
+        Parameters
+        ----------
+        keys : Union[str, List[str]]
+            keys to be edited
+        values : Union[str, int, float, bool, List[Union[str, int, float, bool]]]
+            values to added ot/updated on keys
+
+        Returns
+        -------
+        Tuple[List[str], List[Union[str, float, int, bool]]]
+            tuple of keys and values
+
+        Raises
+        ------
+        ValueError
+            when keys is and values is not a list and vice versa
+        """
+
+        if isinstance(keys, str) and not isinstance(values, (str, int, float, bool)):
+            raise ValueError("Keys is str so values must be either str, int float, or bool")
+
+        if isinstance(keys, list) and not isinstance(values, list):
+            raise ValueError("Keys is list so values must be list")
+
+        keys_to_use = keys if isinstance(keys, list) else [keys]
+        values_to_use = values if isinstance(values, list) else [values]
+
+        return keys_to_use, values_to_use
+
+    @staticmethod
+    def fitsify(path: str) -> str:
         """
         adds fits if the given path does not end with either `fit` ot `fits`
 
@@ -29,8 +65,8 @@ class Fixer:
 
         return path
 
-    @classmethod
-    def outputs(cls, output: Optional[str], fits_array) -> Union[List[None], List[str]]:
+    @staticmethod
+    def outputs(output: Optional[str], fits_array) -> Union[List[None], List[str]]:
         """
         Replaces parent directory of the given `fits_array` with the given
         directory `output`. If output is None it will create a temporary one
@@ -60,8 +96,8 @@ class Fixer:
 
         return to_write
 
-    @classmethod
-    def output(cls, output: Optional[str] = None, override: bool = False,
+    @staticmethod
+    def output(output: Optional[str] = None, override: bool = False,
                prefix: str = "spy_", suffix: str = ".fits",
                fitsify: bool = True) -> str:
         """
@@ -97,7 +133,7 @@ class Fixer:
                 output = f.name
 
         if fitsify:
-            output = cls.fitsify(output)
+            output = Fixer.fitsify(output)
 
         if Path(output).exists():
             if override:
@@ -126,10 +162,8 @@ class Fixer:
             rs = [rs]
         return rs
 
-    @classmethod
-    def header(cls,
-               headers: Optional[Union[str, List[str]]] = None
-               ) -> Any:
+    @staticmethod
+    def header(headers: Optional[Union[str, List[str]]] = None) -> Any:
         """
         Makes sure the given header(s) are a list of headers
 
@@ -152,10 +186,8 @@ class Fixer:
 
         return headers
 
-    @classmethod
-    def coordinate(cls,
-                   xs: NUMERICS, ys: NUMERICS
-                   ) -> Tuple[List[Union[float, int]], List[Union[float, int]]]:
+    @staticmethod
+    def coordinate(xs: NUMERICS, ys: NUMERICS) -> Tuple[List[Union[float, int]], List[Union[float, int]]]:
         """
         Makes sure the given `x` and `y` coordinate(s) are list of numbers and
         have the same length
@@ -190,8 +222,8 @@ class Fixer:
 
 
 class Check:
-    @classmethod
-    def operand(cls, operand: str) -> None:
+    @staticmethod
+    def operand(operand: str) -> None:
         """
         Checks if the operand is both string and one of `["+", "-", "*", "/", "**", "^"]`
 
@@ -212,8 +244,8 @@ class Check:
         if operand not in ["+", "-", "*", "/", "**", "^"]:
             raise ValueError("Operand can only be one of these: +, -, *, /, **, ^")
 
-    @classmethod
-    def method(cls, method: str) -> None:
+    @staticmethod
+    def method(method: str) -> None:
         """
         Checks if the method is both string and one of `["average", "mean", "median", "sum"]`
 
@@ -234,8 +266,8 @@ class Check:
         if method not in ["average", "mean", "median", "sum"]:
             raise ValueError("Method can only be one of these: average, mean, median, sum")
 
-    @classmethod
-    def clipping(cls, method: Optional[str] = None) -> None:
+    @staticmethod
+    def clipping(method: Optional[str] = None) -> None:
         """
         Checks if the clipping is both string and one of `["sigma", "minmax"]`
 

@@ -21,7 +21,7 @@ from sep import Background
 from typing_extensions import Self
 
 from pathlib import Path
-from typing import List, Union, Any, Optional, Iterator, Hashable, Dict
+from typing import List, Union, Any, Optional, Iterator, Dict
 
 from astropy.io.fits.header import Header
 
@@ -44,19 +44,18 @@ class FitsArray(DataArray):
         self.fits_list = fits_list
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}" \
-               f"(@: '{id(self)}', nof:'{len(self)}')"
+        return f"{self.__class__.__name__}(@: '{id(self)}', nof:'{len(self)}')"
 
     def __iter__(self) -> Iterator[Fits]:
         for x in self.fits_list:
             yield x
 
-    def __getitem__(self, key: Union[int, slice]) -> Union[Fits, FitsArray]:
+    def __getitem__(self, key: Union[int, slice]) -> Union[Fits, Self]:
 
         if isinstance(key, int):
             return self.fits_list[key]
         elif isinstance(key, slice):
-            return FitsArray(self.fits_list[key])
+            return self.__class__(self.fits_list[key])
 
         self.logger.error("Wrong slice")
         raise ValueError("Wrong slice")
@@ -215,7 +214,7 @@ class FitsArray(DataArray):
         """
         self.logger.info("Merging")
 
-        if not isinstance(other, FitsArray):
+        if not isinstance(other, self.__class__):
             self.logger.error(f"Other must be a {self.__class__.__name__}")
             raise ValueError(f"Other must be a {self.__class__.__name__}")
 
@@ -297,7 +296,7 @@ class FitsArray(DataArray):
         for fits in self:
             try:
                 value = fits.value(x, y)
-                data.append([fits.file.name, value])
+                data.append([abs(fits), value])
             except IndexError:
                 pass
 
@@ -370,9 +369,8 @@ class FitsArray(DataArray):
         )
 
     def hedit(self, keys: Union[str, List[str]],
-              values: Optional[Union[str, List[str]]] = None,
-              delete: bool = False,
-              value_is_key: bool = False) -> Self:
+              values: Optional[Union[str, int, float, bool, List[Union[str, int, float, bool]]]] = None,
+              delete: bool = False, value_is_key: bool = False) -> Self:
         """
         Edits header of the given files.
 
@@ -380,7 +378,7 @@ class FitsArray(DataArray):
         ----------
         keys: str or List[str]
             Keys to be altered.
-        values: str or List[str], optional
+        values: Optional[Union[str, int, float, bool, List[Union[str, int, float, bool]]]], optional
             Values to be added to set be set.
             Would be ignored if delete is True.
         delete: bool, optional
@@ -393,10 +391,9 @@ class FitsArray(DataArray):
 
         for fits in self:
             try:
-                fits.hedit(keys, values=values, delete=delete,
-                           value_is_key=value_is_key)
-            except Exception:
-                pass
+                fits.hedit(keys, values=values, delete=delete, value_is_key=value_is_key)
+            except Exception as error:
+                self.logger.error(error)
 
         return self
 
@@ -419,12 +416,8 @@ class FitsArray(DataArray):
         if isinstance(fields, str):
             fields = [fields]
 
-        fields_to_use = []
         headers = self.header()
-
-        for field in fields:
-            if field in headers.columns:
-                fields_to_use.append(field)
+        fields_to_use = [field for field in fields if field in headers.columns]
 
         if len(fields_to_use) < 1:
             return pd.DataFrame()
@@ -471,6 +464,7 @@ class FitsArray(DataArray):
             return None
 
         if len(weights) != len(self):
+            self.logger.error("Number of Fits must be equal to number of weights")
             raise NumberOfElementError("Number of Fits must be equal to number of weights")
 
         weights_to_use = []
@@ -480,21 +474,20 @@ class FitsArray(DataArray):
                 if weight in header:
                     weights_to_use.append(header[weight].iloc[0])
                 else:
+                    self.logger.error("Header not available")
                     raise ValueError("Header not available")
 
             elif isinstance(weight, (float, int)):
                 weights_to_use.append(weight)
             else:
+                self.logger.error("Weight must be either a header key or numeric value")
                 raise ValueError("Weight must be either a header key or numeric value")
 
         return weights_to_use
 
     def __prepare_arith(self,
-                        other: Union[
-                            FitsArray, Fits, float, int,
-                            List[Union[Fits, float, int]]
-                        ]
-                        ) -> Union[FitsArray, list[Union[Fits, float, int]]]:
+                        other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]]
+                        ) -> Union[Self, list[Union[Fits, float, int]]]:
         """
         Prepare the other for arithmetic operations
 
@@ -517,23 +510,22 @@ class FitsArray(DataArray):
         """
         self.logger.info("Preparing for arithmetic operations")
 
-        other_to_use: Union[FitsArray, list[Union[Fits, float, int]]]
+        other_to_use: Union[Self, list[Union[Fits, float, int]]]
 
         if isinstance(other, (Fits, float, int)):
             other_to_use = [other] * len(self)
-        elif isinstance(other, (FitsArray, List)):
+        elif isinstance(other, (self.__class__, List)):
             if len(other) != len(self):
-                raise NumberOfElementError("Other must have the same length "
-                                           "with the FitsArray")
+                self.logger.error("Other must have the same length with the FitsArray")
+                raise NumberOfElementError("Other must have the same length with the FitsArray")
             other_to_use = other
         else:
-            raise ValueError("other must be either a value or list of values")
+            self.logger.error("Other must be either a value or list of values")
+            raise ValueError("Other must be either a value or list of values")
 
         return other_to_use
 
-    def add(self,
-            other: Union[
-                FitsArray, Fits, float, int, List[Union[Fits, float, int]]],
+    def add(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         """
         Does Addition operation on the `FitsArray` object
@@ -544,8 +536,10 @@ class FitsArray(DataArray):
 
         - If other is numeric each element of the matrix will be added to the number.
         - If other is another `Fits` elementwise summation will be done.
-        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
-        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics
+            and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both
+            `FitsArray`s must be equal
 
         Parameters
         ----------
@@ -575,14 +569,12 @@ class FitsArray(DataArray):
             try:
                 result = fits.add(the_other, output_fit)
                 fits_array.append(result)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def sub(self,
-            other: Union[
-                FitsArray, Fits, float, int, List[Union[Fits, float, int]]],
+    def sub(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         """
         Does Subtraction operation on the `FitsArray` object
@@ -594,8 +586,10 @@ class FitsArray(DataArray):
 
         - If other is numeric each element of the matrix will be subtracted from the number.
         - If other is another `Fits` elementwise subtraction will be done.
-        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
-        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics
+            and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both
+            `FitsArray`s must be equal
 
 
         Parameters
@@ -626,14 +620,12 @@ class FitsArray(DataArray):
             try:
                 result = fits.sub(the_other, output_fit)
                 fits_array.append(result)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def mul(self,
-            other: Union[
-                FitsArray, Fits, float, int, List[Union[Fits, float, int]]],
+    def mul(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         """
         Does Multiplication operation on the `FitsArray` object
@@ -645,8 +637,10 @@ class FitsArray(DataArray):
 
         - If other is numeric each element of the matrix will be multiplied by the number.
         - If other is another `Fits` elementwise multiplication will be done.
-        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
-        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics
+            and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both
+            `FitsArray`s must be equal
 
 
         Parameters
@@ -677,14 +671,12 @@ class FitsArray(DataArray):
             try:
                 result = fits.mul(the_other, output_fit)
                 fits_array.append(result)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def div(self,
-            other: Union[
-                FitsArray, Fits, float, int, List[Union[Fits, float, int]]],
+    def div(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         """
         Does Division operation on the `FitsArray` object
@@ -696,8 +688,10 @@ class FitsArray(DataArray):
 
         - If other is numeric each element of the matrix will be divided by the number.
         - If other is another `Fits` elementwise division will be done.
-        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
-        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics
+            and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both
+            `FitsArray`s must be equal
 
 
         Parameters
@@ -728,14 +722,12 @@ class FitsArray(DataArray):
             try:
                 result = fits.div(the_other, output_fit)
                 fits_array.append(result)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def pow(self,
-            other: Union[
-                Self, Fits, float, int, List[Union[Fits, float, int]]],
+    def pow(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         """
         Does Power operation on the `FitsArray` object
@@ -747,8 +739,10 @@ class FitsArray(DataArray):
 
         - If other is numeric each element of the matrix will be raised by the number.
         - If other is another `Fits` elementwise power will be done.
-        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
-        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics
+            and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both
+            `FitsArray`s must be equal
 
 
         Parameters
@@ -779,14 +773,12 @@ class FitsArray(DataArray):
             try:
                 result = fits.pow(the_other, output_fit)
                 fits_array.append(result)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def imarith(self, other: Union[
-        FitsArray, Fits, float, int, List[Union[Fits, float, int]]
-    ],
+    def imarith(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
                 operand: str, output: Optional[str] = None) -> Self:
         """
         Does Arithmetic operation on the `FitsArray` object
@@ -798,8 +790,10 @@ class FitsArray(DataArray):
 
         - If other is numeric each element of the matrix will be processed by the number.
         - If other is another `Fits` elementwise operation will be done.
-        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics and `FitsArray` must be equal
-        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both `FitsArray`s must be equal
+        - If other is list of numeric the first would be applied to each matrix. Number of elements in list of numerics
+            and `FitsArray` must be equal
+        - If other is another `FitsArray` the second would be applied to each matrix. Number of elements in the both
+            `FitsArray`s must be equal
 
 
         Parameters
@@ -832,8 +826,8 @@ class FitsArray(DataArray):
             try:
                 result = fits.imarith(the_other, operand, output_fit)
                 fits_array.append(result)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
@@ -864,6 +858,7 @@ class FitsArray(DataArray):
         elif isinstance(xs, list):
             to_x_shift = xs
         else:
+            self.logger.error("xs must be either int or a list of int")
             raise ValueError("xs must be either int or a list of int")
 
         if isinstance(ys, int):
@@ -871,11 +866,12 @@ class FitsArray(DataArray):
         elif isinstance(ys, list):
             to_y_shift = ys
         else:
+            self.logger.error("ys must be either int or a list of int")
             raise ValueError("ys must be either int or a list of int")
 
         if len(to_x_shift) != len(to_y_shift) != len(self):
-            raise NumberOfElementError("Number of xs, ys, and Fits in "
-                                       "FitsArray must be equal")
+            self.logger.error("Number of xs, ys, and Fits in FitsArray must be equal")
+            raise NumberOfElementError("Number of xs, ys, and Fits in FitsArray must be equal")
 
         fits_array = []
         outputs = Fixer.outputs(output, self)
@@ -885,8 +881,8 @@ class FitsArray(DataArray):
             try:
                 aligned = fits.shift(x, y, output_fit)
                 fits_array.append(aligned)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
@@ -915,11 +911,12 @@ class FitsArray(DataArray):
         elif isinstance(angle, list):
             to_rotate = angle
         else:
-            raise ValueError("rotate must be either float or a list of float")
+            self.logger.error("Rotate must be either float or a list of float")
+            raise ValueError("Rotate must be either float or a list of float")
 
         if len(to_rotate) != len(self):
-            raise NumberOfElementError("Number of rotate and Fits in "
-                                       "FitsArray must be equal")
+            self.logger.error("Number of rotate and Fits in FitsArray must be equal")
+            raise NumberOfElementError("Number of rotate and Fits in FitsArray must be equal")
 
         fits_array = []
         outputs = Fixer.outputs(output, self)
@@ -929,8 +926,8 @@ class FitsArray(DataArray):
             try:
                 rotated = fits.rotate(ang, reshape=reshape, output=output_fit)
                 fits_array.append(rotated)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
@@ -962,13 +959,14 @@ class FitsArray(DataArray):
         self.logger.info("Aligning all images")
 
         if isinstance(reference, int):
-            the_reference = self[reference]
+            the_reference = self[int(reference)]
         elif isinstance(reference, Fits):
             the_reference = reference
         else:
             self.logger.error("other must be either an integer or a Fits")
             raise ValueError("other must be either an integer or a Fits")
 
+        # todo This FitsArray must be self.__class__ but mypy complains
         if isinstance(the_reference, FitsArray):
             self.logger.error("Cannot be FitsArray")
             raise ValueError("Cannot be FitsArray")
@@ -982,8 +980,8 @@ class FitsArray(DataArray):
                                      min_area=min_area
                                      )
                 fits_array.append(aligned)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
@@ -1026,15 +1024,13 @@ class FitsArray(DataArray):
                 fits_array.append(zero_corrected)
             except OverCorrection:
                 fits_array.append(fits)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def dark_correction(self, master_dark: Fits,
-                        exposure: Optional[str] = None,
-                        output: Optional[str] = None,
-                        force: bool = False) -> Self:
+    def dark_correction(self, master_dark: Fits, exposure: Optional[str] = None,
+                        output: Optional[str] = None, force: bool = False) -> Self:
         """
         Does dark correction of the data
 
@@ -1068,8 +1064,8 @@ class FitsArray(DataArray):
                 fits_array.append(dark_corrected)
             except OverCorrection:
                 fits_array.append(fits)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
@@ -1104,8 +1100,8 @@ class FitsArray(DataArray):
                 fits_array.append(flat_corrected)
             except OverCorrection:
                 fits_array.append(fits)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(fits_array)
 
@@ -1219,11 +1215,10 @@ class FitsArray(DataArray):
                                            exposure=exposure)
                 photometry.append(phot)
             except NumberOfElementError:
-                raise NumberOfElementError(
-                    "The length of Xs and Ys must be equal"
-                )
-            except Exception:
-                pass
+                self.logger.error("The length of Xs and Ys must be equal")
+                raise NumberOfElementError("The length of Xs and Ys must be equal")
+            except Exception as error:
+                self.logger.error(error)
 
         if len(photometry) < 1:
             return pd.DataFrame()
@@ -1269,11 +1264,10 @@ class FitsArray(DataArray):
                                            exposure=exposure)
                 photometry.append(phot)
             except NumberOfElementError:
-                raise NumberOfElementError(
-                    "The length of Xs and Ys must be equal"
-                )
-            except Exception:
-                pass
+                self.logger.error("The length of Xs and Ys must be equal")
+                raise NumberOfElementError("The length of Xs and Ys must be equal")
+            except Exception as error:
+                self.logger.error(error)
 
         if len(photometry) < 1:
             return pd.DataFrame()
@@ -1316,8 +1310,8 @@ class FitsArray(DataArray):
                 phot = fits.photometry(xs, ys, rs, headers=headers,
                                        exposure=exposure)
                 photometry.append(phot)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         if len(photometry) < 1:
             return pd.DataFrame()
@@ -1450,8 +1444,8 @@ class FitsArray(DataArray):
                     gain_apply=gain_apply
                 )
                 clean_fits_array.append(clean_fits)
-            except Exception:
-                pass
+            except Exception as error:
+                self.logger.error(error)
 
         return self.__class__(clean_fits_array)
 
@@ -1485,13 +1479,12 @@ class FitsArray(DataArray):
             return im,
 
         _ = animation.FuncAnimation(
-            fig, updatefig, interval=interval, blit=True
+            fig, updatefig, interval=interval, blit=True,
+            cache_frame_data=False
         )
         plt.show()
 
-    def group_by(self,
-                 groups: Union[str, List[str]]
-                 ) -> Dict[Hashable, Self]:
+    def group_by(self, groups: Union[str, List[str]]) -> Dict[Any, Self]:
         """
         Groups the `FitsArray` by given header
 
@@ -1502,7 +1495,7 @@ class FitsArray(DataArray):
 
         Returns
         -------
-        Dict[Hashable, FitsArray]
+        Dict[Any, FitsArray]
             header keys and `FitsArray` pairs
         """
         self.logger.info("Group images by headers")
@@ -1526,7 +1519,8 @@ class FitsArray(DataArray):
         return grouped
 
     def combine(self, method: str = "average", clipping: Optional[str] = None,
-                weights: Optional[List[Union[float, int]]] = None) -> Fits:
+                weights: Optional[List[Union[float, int]]] = None,
+                output: Optional[str] = None, override: bool = False) -> Fits:
         """
         Combines FitsArray to a Fits
 
@@ -1538,6 +1532,10 @@ class FitsArray(DataArray):
             clipping method (same as rejection in IRAF). Either sigmaclip or minmax
         weights: float or int, optional
             weights to be applied before combining. If None [1, ...] will be used.
+        output: str, optional
+            New path to save the files.
+        override : bool, default=False
+            delete already existing file if `true`
 
         Returns
         -------
@@ -1562,6 +1560,7 @@ class FitsArray(DataArray):
             weights = [1] * len(self)
 
         if len(weights) != len(self):
+            self.logger.error("Length of weights must be equal to number of Fits")
             raise ValueError("Length of weights must be equal to number of Fits")
 
         if clipping is not None:
@@ -1573,13 +1572,14 @@ class FitsArray(DataArray):
         combiner.weights = np.array(weights)
 
         if "median".startswith(method.lower()):
-            return Fits.from_data_header(data=combiner.median_combine().data)
+            return Fits.from_data_header(data=combiner.median_combine().data, output=output, override=override)
         elif "sum".startswith(method.lower()):
-            return Fits.from_data_header(data=combiner.sum_combine().data)
+            return Fits.from_data_header(data=combiner.sum_combine().data, output=output, override=override)
         else:
-            return Fits.from_data_header(data=combiner.average_combine().data)
+            return Fits.from_data_header(data=combiner.average_combine().data, output=output, override=override)
 
-    def zero_combine(self, method: str = "median", clipping: Optional[str] = None) -> Fits:
+    def zero_combine(self, method: str = "median", clipping: Optional[str] = None,
+                     output: Optional[str] = None, override: bool = False) -> Fits:
         """
         Combines FitsArray to a Fits optimized for zero combining
 
@@ -1589,6 +1589,10 @@ class FitsArray(DataArray):
             method of combine. Either average, mean, or median
         clipping: str, optional
             clipping method (same as rejection in IRAF). Either sigmaclip or minmax
+        output: str, optional
+            New path to save the files.
+        override : bool, default=False
+            delete already existing file if `true`
 
         Returns
         -------
@@ -1602,10 +1606,11 @@ class FitsArray(DataArray):
         ValueError
             when the clipping is not either of sigma, or minmax
         """
-        return self.combine(method=method, clipping=clipping)
+        return self.combine(method=method, clipping=clipping, output=output, override=override)
 
     def dark_combine(self, method: str = "median", clipping: Optional[str] = None,
-                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None) -> Fits:
+                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None,
+                     output: Optional[str] = None, override: bool = False) -> Fits:
         """
         Combines FitsArray to a Fits optimized for dark combining
 
@@ -1617,6 +1622,10 @@ class FitsArray(DataArray):
             clipping method (same as rejection in IRAF). Either sigmaclip or minmax
         weights: str, float, or int, optional
             weights to be applied before combining. If None [1, ...] will be used.
+        output: str, optional
+            New path to save the files.
+        override : bool, default=False
+            delete already existing file if `true`
 
         Returns
         -------
@@ -1634,10 +1643,11 @@ class FitsArray(DataArray):
         """
 
         fixed_weights = self.__prepare_weights(weights)
-        return self.combine(method=method, clipping=clipping, weights=fixed_weights)
+        return self.combine(method=method, clipping=clipping, weights=fixed_weights, output=output, override=override)
 
     def flat_combine(self, method: str = "median", clipping: Optional[str] = None,
-                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None) -> Fits:
+                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None,
+                     output: Optional[str] = None, override: bool = False) -> Fits:
         """
         Combines FitsArray to a Fits optimized for flat combining
 
@@ -1649,6 +1659,10 @@ class FitsArray(DataArray):
             clipping method (same as rejection in IRAF). Either sigmaclip or minmax
         weights: str, float, or int, optional
             weights to be applied before combining. If None [1, ...] will be used.
+        output: str, optional
+            New path to save the files.
+        override : bool, default=False
+            delete already existing file if `true`
 
         Returns
         -------
@@ -1665,4 +1679,4 @@ class FitsArray(DataArray):
             when the clipping is not either of sigma, or minmax
         """
         fixed_weights = self.__prepare_weights(weights)
-        return self.combine(method=method, clipping=clipping, weights=fixed_weights)
+        return self.combine(method=method, clipping=clipping, weights=fixed_weights, output=output, override=override)

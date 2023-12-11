@@ -2,15 +2,14 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from typing import Optional, List, Union, Any, TYPE_CHECKING, Dict, Hashable
-
-from astropy.io.fits import Header
-from sep import Background
+from typing import Optional, List, Union, Any, TYPE_CHECKING, Dict
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from .fits import Fits
 
-from typing_extensions import Self
+from astropy.io.fits import Header
+from sep import Background
 
 import pandas as pd
 from astropy.nddata import CCDData
@@ -27,10 +26,8 @@ class Data(ABC):
 
     @classmethod
     @abstractmethod
-    def from_data_header(cls, data: Any,
-                         header: Optional[Header] = None,
-                         output: Optional[str] = None,
-                         override: bool = False) -> Self:
+    def from_data_header(cls, data: Any, header: Optional[Header] = None,
+                         output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @classmethod
@@ -80,9 +77,8 @@ class Data(ABC):
 
     @abstractmethod
     def hedit(self, keys: Union[str, List[str]],
-              values: Optional[Union[str, List[str]]] = None,
-              delete: bool = False,
-              value_is_key: bool = False) -> Self:
+              values: Optional[Union[str, int, float, bool, List[Union[str, int, float, bool]]]] = None,
+              delete: bool = False, value_is_key: bool = False) -> Self:
         ...
 
     @abstractmethod
@@ -90,35 +86,33 @@ class Data(ABC):
         ...
 
     @abstractmethod
-    def add(self, other: Union[Self, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def add(self, other: Union[Self, float, int],
+            output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def sub(self, other: Union[Self, int, float], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def sub(self, other: Union[Self, int, float],
+            output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def mul(self, other: Union[Self, int, float], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def mul(self, other: Union[Self, int, float],
+            output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def div(self, other: Union[Self, int, float], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def div(self, other: Union[Self, int, float],
+            output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def pow(self, other: Union[Fits, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def pow(self, other: Union[Fits, float, int],
+            output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def imarith(self, other: Union[Self, int, float],
-                operand: str,
-                output: Optional[str] = None,
-                override: bool = False) -> Self:
+    def imarith(self, other: Union[Self, int, float], operand: str,
+                output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
     @abstractmethod
@@ -128,8 +122,7 @@ class Data(ABC):
         ...
 
     @abstractmethod
-    def show(self, scale: bool = True,
-             sources: Optional[pd.DataFrame] = None) -> None:
+    def show(self, scale: bool = True, sources: Optional[pd.DataFrame] = None) -> None:
         ...
 
     @abstractmethod
@@ -142,13 +135,11 @@ class Data(ABC):
 
     @abstractmethod
     def zero_correction(self, master_zero: Self,
-                        output: Optional[str] = None,
-                        override: bool = True, force: bool = False) -> Self:
+                        output: Optional[str] = None, override: bool = True, force: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def dark_correction(self, master_dark: Self,
-                        exposure: Optional[str] = None,
+    def dark_correction(self, master_dark: Self, exposure: Optional[str] = None,
                         output: Optional[str] = None, override: bool = False,
                         force: bool = False) -> Self:
         ...
@@ -267,7 +258,7 @@ class DataArray(ABC):
 
     @abstractmethod
     def hedit(self, keys: Union[str, List[str]],
-              values: Optional[Union[str, List[str]]] = None,
+              values: Optional[Union[str, int, float, bool, List[Union[str, int, float, bool]]]] = None,
               delete: bool = False,
               value_is_key: bool = False) -> Self:
         ...
@@ -281,39 +272,33 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def add(self, other: Union[
-        Self, Fits, float, int, List[Union[Fits, float, int]]],
+    def add(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
-    def sub(self, other: Union[
-        Self, Fits, float, int, List[Union[Fits, float, int]]],
+    def sub(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
-    def mul(self, other: Union[
-        Self, Fits, float, int, List[Union[Fits, float, int]]],
+    def mul(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
-    def div(self, other: Union[
-        Self, Fits, float, int, List[Union[Fits, float, int]]],
+    def div(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
     def pow(self,
-            other: Union[
-                Self, Fits, float, int, List[Union[Fits, float, int]]],
+            other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]],
             output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
-    def imarith(self, other: Union[
-        Self, Fits, float, int, List[Union[Fits, float, int]]], operand: str,
+    def imarith(self, other: Union[Self, Fits, float, int, List[Union[Fits, float, int]]], operand: str,
                 output: Optional[str] = None) -> Self:
         ...
 
@@ -341,20 +326,18 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def zero_correction(self, master_zero: Fits, output: Optional[str] = None,
-                        force: bool = False) -> Self:
+    def zero_correction(self, master_zero: Fits,
+                        output: Optional[str] = None, force: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def dark_correction(self, master_dark: Fits,
-                        exposure: Optional[str] = None,
-                        output: Optional[str] = None,
-                        force: bool = False) -> Self:
+    def dark_correction(self, master_dark: Fits, exposure: Optional[str] = None,
+                        output: Optional[str] = None, force: bool = False) -> Self:
         ...
 
     @abstractmethod
-    def flat_correction(self, master_flat: Fits, output: Optional[str] = None,
-                        force: bool = False) -> Self:
+    def flat_correction(self, master_flat: Fits,
+                        output: Optional[str] = None, force: bool = False) -> Self:
         ...
 
     @abstractmethod
@@ -372,8 +355,7 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def photometry_sep(self,
-                       xs: NUMERICS, ys: NUMERICS, rs: NUMERICS,
+    def photometry_sep(self, xs: NUMERICS, ys: NUMERICS, rs: NUMERICS,
                        headers: Optional[Union[str, list[str]]] = None,
                        exposure: Optional[Union[str, float, int]] = None
                        ) -> pd.DataFrame:
@@ -394,26 +376,28 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def group_by(self,
-                 groups: Union[str, List[str]]
-                 ) -> Dict[Hashable, Self]:
+    def group_by(self, groups: Union[str, List[str]]) -> Dict[Any, Self]:
         ...
 
     @abstractmethod
     def combine(self, method: str = "average", clipping: Optional[str] = None,
-                weights: Optional[List[Union[float, int]]] = None) -> Fits:
+                weights: Optional[List[Union[float, int]]] = None,
+                output: Optional[str] = None, override: bool = False) -> Fits:
         ...
 
     @abstractmethod
-    def zero_combine(self, method: str = "median", clipping: Optional[str] = None) -> Fits:
+    def zero_combine(self, method: str = "median", clipping: Optional[str] = None,
+                     output: Optional[str] = None, override: bool = False) -> Fits:
         ...
 
     @abstractmethod
     def dark_combine(self, method: str = "median", clipping: Optional[str] = None,
-                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None) -> Fits:
+                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None,
+                     output: Optional[str] = None, override: bool = False) -> Fits:
         ...
 
     @abstractmethod
     def flat_combine(self, method: str = "median", clipping: Optional[str] = None,
-                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None) -> Fits:
+                     weights: Optional[Union[List[str], List[Union[float, int]]]] = None,
+                     output: Optional[str] = None, override: bool = False) -> Fits:
         ...

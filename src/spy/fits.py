@@ -1,7 +1,6 @@
 from __future__ import annotations
 
-from .error import NothingToDo, AlignError, NumberOfElementError, \
-    OverCorrection, ValueNotFound
+from .error import NothingToDo, AlignError, NumberOfElementError, OverCorrection, CardNotFound
 from .models import Data, NUMERICS
 from .utils import Fixer, Check
 
@@ -33,8 +32,7 @@ from astropy.io import fits as fts
 
 from sep import extract as sep_extract, Background, sum_circle
 
-from ccdproc import cosmicray_lacosmic, subtract_bias, subtract_dark, \
-    flat_correct
+from ccdproc import cosmicray_lacosmic, subtract_bias, subtract_dark, flat_correct
 
 from matplotlib import pyplot as plt
 from mpl_point_clicker import clicker
@@ -55,14 +53,14 @@ class Fits(Data):
         self.ZMag = 25
 
     def __str__(self) -> str:
-        return f"{self.__class__.__name__}" \
-               f"(@: '{id(self)}', path:'{self.file}')"
+        return f"{self.__class__.__name__}(@: '{id(self)}', path:'{self.file}')"
 
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}.from_path('{self.file}')"
 
     def __del__(self) -> None:
         if self.is_temp:
+            self.logger.info("Deleting the temporary file")
             self.file.unlink()
 
     def __abs__(self) -> str:
@@ -283,7 +281,7 @@ class Fits(Data):
         header = fts.getheader(abs(self))
         return pd.DataFrame(
             {i: header[i] for i in header if i}, index=[0]).assign(
-            image=[self.file.name]
+            image=[abs(self)]
         ).set_index("image")
 
     def data(self) -> Any:
@@ -382,7 +380,7 @@ class Fits(Data):
         return pd.DataFrame(
             [
                 [
-                    self.file.name, data.size, np.mean(data), np.std(data),
+                    abs(self), data.size, np.mean(data), np.std(data),
                     np.min(data), np.max(data)
                 ]
             ],
@@ -512,14 +510,11 @@ class Fits(Data):
             psfbeta=psfbeta, gain_apply=gain_apply
         )
 
-        return self.from_data_header(cleaned_data.value,
-                                     header=self.pure_header(), output=output,
-                                     override=override)
+        return self.from_data_header(cleaned_data.value, header=self.pure_header(), output=output, override=override)
 
     def hedit(self, keys: Union[str, List[str]],
-              values: Optional[Union[str, List[str]]] = None,
-              delete: bool = False,
-              value_is_key: bool = False) -> Self:
+              values: Optional[Union[str, int, float, bool, List[Union[str, int, float, bool]]]] = None,
+              delete: bool = False, value_is_key: bool = False) -> Self:
         """
         Edits header of the given file.
 
@@ -527,7 +522,7 @@ class Fits(Data):
         ----------
         keys: str or List[str]
             Keys to be altered.
-        values: str or List[str], optional
+        values: Optional[Union[str, int, float, bool, List[Union[str, int, float, bool]]]], optional
             Values to be added to set be set.
             Would be ignored if delete is True.
         delete: bool, optional
@@ -557,26 +552,14 @@ class Fits(Data):
                 self.logger.error("Delete is False and Value is not given")
                 raise NothingToDo("Delete is False and Value is not given")
 
-            if not isinstance(values, type(keys)):
-                self.logger.error("keys and values must have the same type (str or list)")
-                raise ValueError(
-                    "keys and values must have the same type (str or list)"
-                )
+            keys_to_use, values_to_use = Fixer.key_value_pair(keys, values)
 
-            if isinstance(keys, str):
-                keys = [keys]
-
-            if isinstance(values, str):
-                values = [values]
-
-            if len(keys) != len(values):
+            if len(keys_to_use) != len(values_to_use):
                 self.logger.error("List of keys and values must be equal in length")
-                raise ValueError(
-                    "List of keys and values must be equal in length"
-                )
+                raise ValueError("List of keys and values must be equal in length")
 
             with fts.open(abs(self), "update") as hdu:
-                for key, value in zip(keys, values):
+                for key, value in zip(keys_to_use, values_to_use):
                     if value_is_key:
                         hdu[0].header[key] = hdu[0].header[value]
                     else:
@@ -611,8 +594,7 @@ class Fits(Data):
         shutil.copy(self.file, new_output)
         return self.__class__.from_path(new_output)
 
-    def add(self, other: Union[Fits, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def add(self, other: Union[Self, float, int], output: Optional[str] = None, override: bool = False) -> Self:
         r"""
         Does Addition operation on the `Fits` object
 
@@ -625,7 +607,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        other: Union[Fits, float, int]
+        other: Union[Self, float, int]
             Either a `Fits` object, float, or integer
         output: str
             New path to save the file.
@@ -645,15 +627,8 @@ class Fits(Data):
         self.logger.info("Making addition operation")
 
         if not isinstance(other, (float, int, self.__class__)):
-            self.logger.error(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
-
-            raise ValueError(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
+            self.logger.error(f"Please provide either a {self.__class__} Object or a numeric value")
+            raise ValueError(f"Please provide either a {self.__class__} Object or a numeric value")
 
         if isinstance(other, (float, int)):
             new_data = self.data() + other
@@ -665,8 +640,7 @@ class Fits(Data):
             output=output, override=override
         )
 
-    def sub(self, other: Union[Fits, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def sub(self, other: Union[Self, float, int], output: Optional[str] = None, override: bool = False) -> Self:
         """
         Does Subtraction operation on the `Fits` object
 
@@ -680,7 +654,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        other: Union[Fits, float, int]
+        other: Union[Self, float, int]
             Either a `Fits` object, float, or integer
         output: str
             New path to save the file.
@@ -700,14 +674,8 @@ class Fits(Data):
         self.logger.info("Making subtraction operation")
 
         if not isinstance(other, (float, int, self.__class__)):
-            self.logger.error(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
-            raise ValueError(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
+            self.logger.error(f"Please provide either a {self.__class__} Object or a numeric value")
+            raise ValueError(f"Please provide either a {self.__class__} Object or a numeric value")
 
         if isinstance(other, (float, int)):
             new_data = self.data() - other
@@ -719,8 +687,7 @@ class Fits(Data):
             output=output, override=override
         )
 
-    def mul(self, other: Union[Fits, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def mul(self, other: Union[Self, float, int], output: Optional[str] = None, override: bool = False) -> Self:
         """
         Does Multiplication operation on the `Fits` object
 
@@ -734,7 +701,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        other: Union[Fits, float, int]
+        other: Union[Self, float, int]
             Either a `Fits` object, float, or integer
         output: str
             New path to save the file.
@@ -754,14 +721,8 @@ class Fits(Data):
         self.logger.info("Making multiplication operation")
 
         if not isinstance(other, (float, int, self.__class__)):
-            self.logger.error(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
-            raise ValueError(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
+            self.logger.error(f"Please provide either a {self.__class__} Object or a numeric value")
+            raise ValueError(f"Please provide either a {self.__class__} Object or a numeric value")
 
         if isinstance(other, (float, int)):
             new_data = self.data() * other
@@ -773,8 +734,7 @@ class Fits(Data):
             output=output, override=override
         )
 
-    def div(self, other: Union[Fits, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def div(self, other: Union[Self, float, int], output: Optional[str] = None, override: bool = False) -> Self:
         """
         Does Division operation on the `Fits` object
 
@@ -788,7 +748,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        other: Union[Fits, float, int]
+        other: Union[Self, float, int]
             Either a `Fits` object, float, or integer
         output: str
             New path to save the file.
@@ -808,14 +768,8 @@ class Fits(Data):
         self.logger.info("Making division operation")
 
         if not isinstance(other, (float, int, self.__class__)):
-            self.logger.error(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
-            raise ValueError(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
+            self.logger.error(f"Please provide either a {self.__class__} Object or a numeric value")
+            raise ValueError(f"Please provide either a {self.__class__} Object or a numeric value")
 
         if isinstance(other, (float, int)):
             new_data = self.data() / other
@@ -827,8 +781,7 @@ class Fits(Data):
             output=output, override=override
         )
 
-    def pow(self, other: Union[Fits, float, int], output: Optional[str] = None,
-            override: bool = False) -> Self:
+    def pow(self, other: Union[Self, float, int], output: Optional[str] = None, override: bool = False) -> Self:
         """
         Does Power operation on the `Fits` object
 
@@ -842,7 +795,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        other: Union[Fits, float, int]
+        other: Union[Self, float, int]
             Either a `Fits` object, float, or integer
         output: str
             New path to save the file.
@@ -862,14 +815,8 @@ class Fits(Data):
         self.logger.info("Making power operation")
 
         if not isinstance(other, (float, int, self.__class__)):
-            self.logger.error(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
-            raise ValueError(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
+            self.logger.error(f"Please provide either a {self.__class__} Object or a numeric value")
+            raise ValueError(f"Please provide either a {self.__class__} Object or a numeric value")
 
         if isinstance(other, (float, int)):
             new_data = self.data() ** other
@@ -881,10 +828,8 @@ class Fits(Data):
             output=output, override=override
         )
 
-    def imarith(self, other: Union[Fits, float, int],
-                operand: str,
-                output: Optional[str] = None,
-                override: bool = False) -> Self:
+    def imarith(self, other: Union[Self, float, int], operand: str,
+                output: Optional[str] = None, override: bool = False) -> Self:
         """
         Does Arithmetic operation on the `Fits` object
 
@@ -898,7 +843,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        other: Union[Fits, float, int]
+        other: Union[Self, float, int]
             Either a `Fits`, `float`, or `int`
         operand: str
             operation as string. One of `["+", "-", "*", "/"]`
@@ -922,14 +867,8 @@ class Fits(Data):
         self.logger.info("Making an arithmetic operation")
 
         if not isinstance(other, (float, int, self.__class__)):
-            self.logger.error(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
-            raise ValueError(
-                f"Please provide either a {self.__class__} "
-                "Object or a numeric value"
-            )
+            self.logger.error(f"Please provide either a {self.__class__} Object or a numeric value")
+            raise ValueError(f"Please provide either a {self.__class__} Object or a numeric value")
 
         Check.operand(operand)
 
@@ -944,7 +883,7 @@ class Fits(Data):
         else:
             return self.div(other, output=output, override=override)
 
-    def align(self, reference: Fits, output: Optional[str] = None,
+    def align(self, reference: Self, output: Optional[str] = None,
               max_control_points: int = 50, min_area: int = 5,
               override: bool = False) -> Self:
         """
@@ -954,7 +893,7 @@ class Fits(Data):
 
         Parameters
         ----------
-        reference: Fits
+        reference: Self
             The reference Image to be aligned as a Fits object.
         output: str, optional
             Path of the new fits file.
@@ -982,7 +921,8 @@ class Fits(Data):
                 self.data(),
                 reference.data(),
                 max_control_points=max_control_points,
-                min_area=min_area
+                min_area=min_area,
+                fill_value=0
             )
 
             return self.__class__.from_data_header(
@@ -993,8 +933,7 @@ class Fits(Data):
             self.logger.error("Cannot align two images")
             raise AlignError("Cannot align two images")
 
-    def show(self, scale: bool = True,
-             sources: Optional[pd.DataFrame] = None) -> None:
+    def show(self, scale: bool = True, sources: Optional[pd.DataFrame] = None) -> None:
         """
         Shows the Image using matplotlib.
 
@@ -1007,11 +946,7 @@ class Fits(Data):
         """
         self.logger.info("Showing the image")
 
-        if scale:
-            zscale = ZScaleInterval()
-        else:
-            def zscale(x):
-                return x
+        zscale = ZScaleInterval() if scale else lambda x: x
 
         plt.imshow(zscale(self.data()), cmap="Greys_r")
 
@@ -1039,11 +974,7 @@ class Fits(Data):
         """
         self.logger.info("Showing the image to pick some coordinates")
 
-        if scale:
-            zscale = ZScaleInterval()
-        else:
-            def zscale(x):
-                return x
+        zscale = ZScaleInterval() if scale else lambda x: x
 
         fig, ax = plt.subplots(constrained_layout=True)
         ax.imshow(zscale(self.data()), cmap="Greys_r")
@@ -1069,14 +1000,14 @@ class Fits(Data):
 
         return self
 
-    def zero_correction(self, master_zero: Fits, output: Optional[str] = None,
+    def zero_correction(self, master_zero: Self, output: Optional[str] = None,
                         override: bool = False, force: bool = False) -> Self:
         """
         Does zero correction of the data
 
         Parameters
         ----------
-        master_zero : Fits
+        master_zero : Self
             Zero file to be used for correction
         output: str, optional
             Path of the new fits file.
@@ -1111,16 +1042,14 @@ class Fits(Data):
         self.logger.error("This Data is already zero corrected")
         raise OverCorrection("This Data is already zero corrected")
 
-    def dark_correction(self, master_dark: Fits,
-                        exposure: Optional[str] = None,
-                        output: Optional[str] = None, override: bool = False,
-                        force: bool = False) -> Self:
+    def dark_correction(self, master_dark: Self, exposure: Optional[str] = None, output: Optional[str] = None,
+                        override: bool = False, force: bool = False) -> Self:
         """
         Does dark correction of the data
 
         Parameters
         ----------
-        master_dark : Fits
+        master_dark : Self
             Dark file to be used for correction
         exposure : str, optional
             header card containing exptime
@@ -1151,10 +1080,8 @@ class Fits(Data):
             else:
                 if exposure not in master_dark.header() or \
                         exposure not in master_dark.header():
-                    raise ValueNotFound(
-                        f"Key {exposure} not found in file, "
-                        "master_dark or both"
-                    )
+                    self.logger.error(f"Key {exposure} not found in file, master_dark or both")
+                    raise CardNotFound(f"Key {exposure} not found in file, master_dark or both")
 
                 options = {
                     "dark_exposure": float(
@@ -1178,14 +1105,14 @@ class Fits(Data):
         self.logger.error("This Data is already dark corrected")
         raise OverCorrection("This Data is already dark corrected")
 
-    def flat_correction(self, master_flat: Fits, output: Optional[str] = None,
+    def flat_correction(self, master_flat: Self, output: Optional[str] = None,
                         override: bool = False, force: bool = False) -> Self:
         """
         Does flat correction of the data
 
         Parameters
         ----------
-        master_flat : Fits
+        master_flat : Self
             Flat file to be used for correction
         output: str, optional
             Path of the new fits file.
@@ -1228,8 +1155,7 @@ class Fits(Data):
 
         return Background(self.data())
 
-    def daofind(self, sigma: float = 3.0, fwhm: float = 3.0,
-                threshold: float = 5.0) -> pd.DataFrame:
+    def daofind(self, sigma: float = 3.0, fwhm: float = 3.0, threshold: float = 5.0) -> pd.DataFrame:
         """
         Runs daofind to detect sources on the image.
 
@@ -1272,8 +1198,7 @@ class Fits(Data):
             ]
         )
 
-    def extract(self, detection_sigma: float = 5.0,
-                min_area: float = 5.0) -> pd.DataFrame:
+    def extract(self, detection_sigma: float = 5.0, min_area: float = 5.0) -> pd.DataFrame:
         """
         Runs astroalign._find_sources to detect sources on the image.
 
@@ -1297,6 +1222,7 @@ class Fits(Data):
                               minarea=min_area)
         sources.sort(order="flux")
         if len(sources) < 0:
+            self.logger.error("No source was found")
             raise NumberOfElementError("No source was found")
 
         return pd.DataFrame(
@@ -1381,7 +1307,7 @@ class Fits(Data):
                                                 exposure_to_use)
                 table.append(
                     [
-                        self.file.name, "sep", x, y, new_r, flux, flux_err,
+                        abs(self), "sep", x, y, new_r, flux, flux_err,
                         flag, snr, mag, mag_err, *headers_
                     ]
                 )
@@ -1478,7 +1404,7 @@ class Fits(Data):
                 )
                 table.append(
                     [
-                        self.file.name, "phu",
+                        abs(self), "phu",
                         phot_line["xcenter"].value,
                         phot_line["ycenter"].value, new_r,
                         phot_line["aperture_sum"],
@@ -1534,8 +1460,7 @@ class Fits(Data):
              ))
         )
 
-    def shift(self, x: int, y: int, output: Optional[str] = None,
-              override: bool = False) -> Self:
+    def shift(self, x: int, y: int, output: Optional[str] = None, override: bool = False) -> Self:
         """
         Shifts the data of `Fits` object
 
@@ -1572,8 +1497,8 @@ class Fits(Data):
         return self.from_data_header(shifted_data, self.pure_header(),
                                      output=output, override=override)
 
-    def rotate(self, angle: Union[float, int], reshape: bool = False, output: Optional[str] = None,
-               override: bool = False) -> Self:
+    def rotate(self, angle: Union[float, int], reshape: bool = False,
+               output: Optional[str] = None, override: bool = False) -> Self:
         """
         Rotates the data of `Fits` object
 

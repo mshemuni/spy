@@ -228,6 +228,24 @@ class TestFits(unittest.TestCase):
         self.assertIn("MSH", header.columns)
         self.assertEqual(header["MSH"].values, ["TEST"])
 
+    def test_hedit_integer(self):
+        self.SAMPLE.hedit("MSH", 44)
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+        self.assertEqual(header["MSH"].values, 44)
+
+    def test_hedit_float(self):
+        self.SAMPLE.hedit("MSH", 4.4)
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+        self.assertEqual(header["MSH"].values, 4.4)
+
+    def test_hedit_bool(self):
+        self.SAMPLE.hedit("MSH", True)
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+        self.assertTrue(header["MSH"].values)
+
     def test_hedit_list(self):
         self.SAMPLE.hedit(["MSH1", "MSH2"], ["TEST1", "TEST2"])
         header = self.SAMPLE.header()
@@ -236,6 +254,16 @@ class TestFits(unittest.TestCase):
             self.assertIn(each, header.columns)
 
         for key, value in zip(["MSH1", "MSH2"], ["TEST1", "TEST2"]):
+            self.assertEqual(header[key].values, [value])
+
+    def test_hedit_lis_different(self):
+        self.SAMPLE.hedit(["MSH1", "MSH2", "MSH3", "MSH4"], ["TEST1", 44, 4.4, True])
+        header = self.SAMPLE.header()
+
+        for each in ["MSH1", "MSH2", "MSH3", "MSH4"]:
+            self.assertIn(each, header.columns)
+
+        for key, value in zip(["MSH1", "MSH2", "MSH3", "MSH4"], ["TEST1", 44, 4.4, True]):
             self.assertEqual(header[key].values, [value])
 
     def test_hedit_no_value(self):

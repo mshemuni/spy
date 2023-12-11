@@ -516,10 +516,40 @@ class TestFitsArray(unittest.TestCase):
         self.SAMPLE.hedit("MSH", "TEST")
         header = self.SAMPLE.header()
         self.assertIn("MSH", header.columns)
-        print(header["MSH"].values)
+
         self.assertListEqual(
             header["MSH"].values.tolist(),
             ["TEST"] * len(self.SAMPLE)
+        )
+
+    def test_hedit_integer(self):
+        self.SAMPLE.hedit("MSH", 44)
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+
+        self.assertListEqual(
+            header["MSH"].values.tolist(),
+            [44] * len(self.SAMPLE)
+        )
+
+    def test_hedit_float(self):
+        self.SAMPLE.hedit("MSH", 4.4)
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+
+        self.assertListEqual(
+            header["MSH"].values.tolist(),
+            [4.4] * len(self.SAMPLE)
+        )
+
+    def test_hedit_bool(self):
+        self.SAMPLE.hedit("MSH", False)
+        header = self.SAMPLE.header()
+        self.assertIn("MSH", header.columns)
+
+        self.assertListEqual(
+            header["MSH"].values.tolist(),
+            [False] * len(self.SAMPLE)
         )
 
     def test_hedit_list(self):
@@ -530,6 +560,17 @@ class TestFitsArray(unittest.TestCase):
             self.assertIn(each, header.columns)
 
         for key, value in zip(["MSH1", "MSH2"], ["TEST1", "TEST2"]):
+            self.assertEqual(header[key].values.tolist(),
+                             [value] * len(self.SAMPLE))
+
+    def test_hedit_list_different(self):
+        self.SAMPLE.hedit(["MSH1", "MSH2", "MSH3", "MSH4"], ["TEST1", 44, 4.4, True])
+        header = self.SAMPLE.header()
+
+        for each in ["MSH1", "MSH2", "MSH3", "MSH4"]:
+            self.assertIn(each, header.columns)
+
+        for key, value in zip(["MSH1", "MSH2", "MSH3", "MSH4"], ["TEST1", 44, 4.4, True]):
             self.assertEqual(header[key].values.tolist(),
                              [value] * len(self.SAMPLE))
 
