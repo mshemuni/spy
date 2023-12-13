@@ -1298,16 +1298,29 @@ class TestFitsArray(unittest.TestCase):
         with self.assertRaises(NumberOfElementError):
             self.SAMPLE.imarith(self.SAMPLE, "?")
 
-    def test_shift(self):
-        new_fits_array = self.SAMPLE.shift(
-            [20] * len(self.SAMPLE),
-            [10] * len(self.SAMPLE)
-        )
+    def test_shift_numeric(self):
+        new_fits_array = self.SAMPLE.shift(20, 10)
         for fits, shifted in zip(self.SAMPLE, new_fits_array):
             self.assertEqual(
                 fits.data()[123, 123],
                 shifted.data()[133, 143],
             )
+
+    def test_shift_list(self):
+        xs = list(range(10, 110, 10))
+        ys = list(range(20, 120, 10))
+        new_fits_array = self.SAMPLE.shift(xs, ys)
+        for fits, shifted, x, y in zip(self.SAMPLE, new_fits_array, xs, ys):
+            self.assertEqual(
+                fits.data()[123, 123],
+                shifted.data()[123 + y, 123 + x],
+            )
+
+    def test_shift_list_number_of_elements(self):
+        xs = list(range(10, 110))
+        ys = list(range(20, 120))
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.shift(xs, ys)
 
     def test_rotate(self):
         new_fits_array = self.SAMPLE.rotate(math.pi)
@@ -1326,13 +1339,10 @@ class TestFitsArray(unittest.TestCase):
                 rotated.data(), rotated_data
             )
 
-    def test_shift_numeric(self):
-        new_fits_array = self.SAMPLE.shift(20, 10)
-        for fits, shifted in zip(self.SAMPLE, new_fits_array):
-            self.assertEqual(
-                fits.data()[123, 123],
-                shifted.data()[133, 143],
-            )
+    def test_rotate_number_of_elements(self):
+        angles = list(each * math.pi / 180 for each in range(0, 180))
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.rotate(angles)
 
     def test_shift_not_equal(self):
         with self.assertRaises(NumberOfElementError):
@@ -1352,6 +1362,34 @@ class TestFitsArray(unittest.TestCase):
                 ["10"] * len(self.SAMPLE)
             )
 
+    def test_crop(self):
+        new_fits_array = self.SAMPLE.crop(20, 12, 220, 200)
+        for fits, cropped in zip(self.SAMPLE, new_fits_array):
+            cropped_data = fits.data()[12:212, 20:240]
+            np.testing.assert_array_equal(
+                cropped.data(), cropped_data
+            )
+
+    def test_crop_list(self):
+        xs = list(range(0, 100, 10))
+        ys = list(range(100, 200, 10))
+        widths = list(range(10, 110, 10))
+        heights = list(range(110, 210, 10))
+        new_fits_array = self.SAMPLE.crop(xs, ys, widths, heights)
+        for fits, cropped, x, y, w, h in zip(self.SAMPLE, new_fits_array, xs, ys, widths, heights):
+            cropped_data = fits.data()[y:y + h, x:x + w]
+            np.testing.assert_array_equal(
+                cropped.data(), cropped_data
+            )
+
+    def test_crop_list_number_of_elements(self):
+        xs = list(range(0, 100))
+        ys = list(range(100, 200))
+        widths = list(range(10, 110))
+        heights = list(range(110, 210))
+        with self.assertRaises(NumberOfElementError):
+            _ = self.SAMPLE.crop(xs, ys, widths, heights)
+
     def test_align(self):
         aligned = self.SAMPLE.align()
         self.assertIsInstance(aligned, FitsArray)
@@ -1367,10 +1405,6 @@ class TestFitsArray(unittest.TestCase):
     def test_align_another_fits(self):
         aligned = self.SAMPLE.align(self.SAMPLE[0])
         self.assertIsInstance(aligned, FitsArray)
-
-    def test_solve_field(self):
-        solved = self.SAMPLE.solve_filed()
-        self.assertIsInstance(solved, FitsArray)
 
     def test_zero_correction(self):
         new_fits_array = self.SAMPLE.zero_correction(self.SAMPLE[0])

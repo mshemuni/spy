@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from astropy.wcs import WCS
+
 from .error import NumberOfElementError, OverCorrection
 from .models import DataArray, NUMERICS
 from .fits import Fits
@@ -24,6 +26,7 @@ from pathlib import Path
 from typing import List, Union, Any, Optional, Iterator, Dict
 
 from astropy.io.fits.header import Header
+from astropy.io import fits as fts
 
 
 class FitsArray(DataArray):
@@ -857,7 +860,6 @@ class FitsArray(DataArray):
 
         if isinstance(xs, int):
             to_x_shift = [xs] * len(self)
-
         elif isinstance(xs, list):
             to_x_shift = xs
         else:
@@ -872,7 +874,7 @@ class FitsArray(DataArray):
             self.logger.error("ys must be either int or a list of int")
             raise ValueError("ys must be either int or a list of int")
 
-        if len(to_x_shift) != len(to_y_shift) != len(self):
+        if not len(to_x_shift) == len(to_y_shift) == len(self):
             self.logger.error("Number of xs, ys, and Fits in FitsArray must be equal")
             raise NumberOfElementError("Number of xs, ys, and Fits in FitsArray must be equal")
 
@@ -882,22 +884,22 @@ class FitsArray(DataArray):
         for fits, output_fit, x, y in zip(self, outputs, to_x_shift,
                                           to_y_shift):
             try:
-                aligned = fits.shift(x, y, output_fit)
-                fits_array.append(aligned)
+                shifted = fits.shift(x, y, output_fit)
+                fits_array.append(shifted)
             except Exception as error:
                 self.logger.error(error)
 
         return self.__class__(fits_array)
 
-    def rotate(self, angle: Union[List[Union[float]], float, int], reshape: bool = False,
+    def rotate(self, angle: Union[List[Union[float, int]], float, int], reshape: bool = False,
                output: Optional[str] = None) -> Self:
         """
         Rotates the data of `FitsArray` object
 
         Parameters
         ----------
-        angle: Union[List[Union[float]], float, int]
-            Rotation angle(s)
+        angle: Union[List[Union[float, int]], float, int]
+            Rotation angle(s) (radians)
         reshape: bool, default=False
             Reshape after rotate
         output: str, optional
@@ -908,9 +910,10 @@ class FitsArray(DataArray):
         Self
             rotated `FitsArray` object
         """
+        self.logger.info("Rotating all images")
+
         if isinstance(angle, (float, int)):
             to_rotate = [angle] * len(self)
-
         elif isinstance(angle, list):
             to_rotate = angle
         else:
@@ -934,6 +937,83 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
+    def crop(self, xs: Union[List[int], int], ys: Union[List[int], int],
+             widths: Union[List[int], int], heights: Union[List[int], int],
+             output: Optional[str] = None) -> Self:
+        """
+        Crops the data of `FitsArray` object
+
+        Parameters
+        ----------
+        xs: Union[List[int], int]
+            x coordinate(s)
+        ys: Union[List[int], int]
+            y coordinate(s)
+        widths: Union[List[int], int]
+            width(s)
+        heights: Union[List[int], int]
+            height(s)
+        output: str, optional
+            New path to save the files.
+
+        Returns
+        -------
+        Self
+            shifted `FitsArray` object
+        """
+
+        self.logger.info("Cropping all images")
+
+        if isinstance(xs, int):
+            to_x_crop = [xs] * len(self)
+        elif isinstance(xs, list):
+            to_x_crop = xs
+        else:
+            self.logger.error("xs must be either int or a list of int")
+            raise ValueError("xs must be either int or a list of int")
+
+        if isinstance(ys, int):
+            to_y_crop = [ys] * len(self)
+        elif isinstance(ys, list):
+            to_y_crop = ys
+        else:
+            self.logger.error("ys must be either int or a list of int")
+            raise ValueError("ys must be either int or a list of int")
+
+        if isinstance(widths, int):
+            to_w_crop = [widths] * len(self)
+        elif isinstance(widths, list):
+            to_w_crop = widths
+        else:
+            self.logger.error("widths must be either int or a list of int")
+            raise ValueError("widths must be either int or a list of int")
+
+        if isinstance(heights, int):
+            to_h_crop = [heights] * len(self)
+        elif isinstance(heights, list):
+            to_h_crop = heights
+        else:
+            self.logger.error("heights must be either int or a list of int")
+            raise ValueError("heights must be either int or a list of int")
+
+        if not len(to_x_crop) == len(to_y_crop) == len(to_w_crop) == len(to_h_crop) == len(self):
+            self.logger.error("Number of xs, ys, widths, heights, and Fits in FitsArray must be equal")
+            raise NumberOfElementError("Number of xs, ys, widths, heights, and Fits in FitsArray must be equal")
+
+        fits_array = []
+        outputs = Fixer.outputs(output, self)
+
+        for fits, output_fit, x, y, w, h in zip(self, outputs, to_x_crop, to_y_crop, to_w_crop, to_h_crop):
+            try:
+                cropped = fits.crop(x, y, w, h, output_fit)
+                fits_array.append(cropped)
+            except IndexError as error:
+                self.logger.info(error)
+            except Exception as error:
+                self.logger.error(error)
+
+        return self.__class__(fits_array)
+
     def align(self, reference: Union[Fits, int] = 0, output: Optional[str] = None,
               max_control_points: int = 50, min_area: int = 5) -> Self:
         """
@@ -943,7 +1023,7 @@ class FitsArray(DataArray):
 
         Parameters
         ----------
-        reference: Optional[Union[Fits, int]], default=0
+        reference: Union[Fits, int], default=0
             The reference Image or the index of `Fits` object in the `FitsArray`
              to be aligned as a Fits object.
         output: str, optional
@@ -971,8 +1051,8 @@ class FitsArray(DataArray):
 
         # todo This FitsArray must be self.__class__ but mypy complains
         if isinstance(the_reference, FitsArray):
-            self.logger.error("Cannot be FitsArray")
-            raise ValueError("Cannot be FitsArray")
+            self.logger.error("reference cannot be FitsArray")
+            raise ValueError(" reference cannot be FitsArray")
 
         fits_array = []
         outputs = Fixer.outputs(output, self)
@@ -988,13 +1068,87 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
-    def solve_filed(self) -> Self:
+    def solve_filed(self, api_key: str, reference: Union[Fits, int] = 0,
+                    solve_timeout: int = 120, force_image_upload: bool = False,
+                    max_control_points: int = 50, min_area: int = 5,
+                    output: Optional[str] = None) -> Self:
         """
-        Creates the WCS headers
+        Solves filed for the given file files
+
+        [1]: https://astroquery.readthedocs.io/en/latest/api/astroquery.astrometry_net.AstrometryNetClass.html
+            #astroquery.astrometry_net.AstrometryNetClass.solve_from_image
+        [2]: [1]: https://astroalign.quatrope.org/en/latest/api.html#astroalign.register
+
+        Parameters
+        ----------
+        api_key: str
+            api_key of astrometry.net (https://nova.astrometry.net/api_help)
+        reference: Union[Fits, int], default=0
+            The reference Image or the index of `Fits` object in the `FitsArray`
+             to be solved.
+        solve_timeout: int, default=120
+            solve timeout as seconds
+        force_image_upload: bool, default=False
+            If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.
+            This option will almost always take longer than finding sources locally.
+            It will even take longer than installing photutils and then rerunning this.
+            Even if this is False the image will be upload unless photutils is installed.
+            see: [1]
+        max_control_points: int, default=50
+            The maximum number of control point-sources to
+            find the transformation. [2]
+        min_area: int, default=5
+            Minimum number of connected pixels to be considered a source. [1]
+        output: str
+            New path to save the file.
+
+        Returns
+        -------
+        Self
+            `Fits` object of aligned image.
+
+        Raises
+        ------
+        Unsolvable
+            when the reference data is unsolvable or timeout
         """
         self.logger.info("Solving field")
 
-        return self
+        if isinstance(reference, int):
+            the_reference = self[int(reference)]
+        elif isinstance(reference, Fits):
+            the_reference = reference
+        else:
+            self.logger.error("other must be either an integer or a Fits")
+            raise ValueError("other must be either an integer or a Fits")
+
+        # todo This FitsArray must be self.__class__ but mypy complains
+        if isinstance(the_reference, FitsArray):
+            self.logger.error("reference cannot be FitsArray")
+            raise ValueError("reference cannot be FitsArray")
+
+        solved_fits = the_reference.solve_filed(
+            api_key, solve_timeout=solve_timeout, force_image_upload=force_image_upload
+        )
+
+        w = WCS(solved_fits.pure_header())
+        wcs_headers = w.to_header()
+        aligned = self.align(
+            reference=the_reference,
+            max_control_points=max_control_points, min_area=min_area,
+            output=output
+        )
+
+        fits_array = []
+
+        for fits in aligned:
+            with fts.open(abs(fits), "update") as hdu:
+                for key in wcs_headers:
+                    hdu[0].header[key] = wcs_headers[key]
+
+            fits_array.append(fits)
+
+        return self.__class__(fits_array)
 
     def zero_correction(self, master_zero: Fits, output: Optional[str] = None,
                         force: bool = False) -> Self:

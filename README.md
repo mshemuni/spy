@@ -1,6 +1,9 @@
 # spy
 Simpler PYraf 
 
+> [!WARNING]  
+> since `solve_field` requires an `api_key`, it is tested locally only.
+
 ![UML](docs/spy.png "spy UML")
 
 [![spy](https://github.com/mshemuni/spy/actions/workflows/python-package.yml/badge.svg)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)

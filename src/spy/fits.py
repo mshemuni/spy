@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from .error import NothingToDo, AlignError, NumberOfElementError, OverCorrection, CardNotFound
+from astroquery.astrometry_net import AstrometryNet
+
+from .error import NothingToDo, AlignError, NumberOfElementError, OverCorrection, CardNotFound, Unsolvable
 from .models import Data, NUMERICS
 from .utils import Fixer, Check
 
@@ -280,8 +282,9 @@ class Fits(Data):
         self.logger.info("Getting header")
 
         header = fts.getheader(abs(self))
+
         return pd.DataFrame(
-            {i: header[i] for i in header if i}, index=[0]).assign(
+            {i: header[i] for i in header if isinstance(header[i], (bool, int, float, str))}, index=[0]).assign(
             image=[abs(self)]
         ).set_index("image")
 
@@ -547,6 +550,8 @@ class Fits(Data):
                 for key in keys:
                     if key in hdu[0].header:
                         del hdu[0].header[key]
+                    else:
+                        self.logger.info("Key does not exist")
 
         else:
             if values is None:
@@ -988,18 +993,52 @@ class Fits(Data):
             klkr.get_positions()["source"], columns=[
                 "xcentroid", "ycentroid"])
 
-    def solve_filed(self) -> Self:
+    def solve_filed(self, api_key: str, solve_timeout: int = 120,
+                    force_image_upload: bool = False,
+                    output: Optional[str] = None, override: bool = False
+                    ) -> Self:
         """
-        Creates the WCS headers
+        Solves filed for the given file.
+
+        [1]: https://astroquery.readthedocs.io/en/latest/api/astroquery.astrometry_net.AstrometryNetClass.html
+            #astroquery.astrometry_net.AstrometryNetClass.solve_from_image
+
+        Parameters
+        ----------
+        api_key: str
+            api_key of astrometry.net (https://nova.astrometry.net/api_help)
+        solve_timeout: int, default=120
+            solve timeout as seconds
+        force_image_upload: bool, default=False
+            If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.
+            This option will almost always take longer than finding sources locally.
+            It will even take longer than installing photutils and then rerunning this.
+            Even if this is False the image will be upload unless photutils is installed.
+            see: [1]
+        output: str
+            New path to save the file.
+        override: bool, default=False
+            If True will overwrite the new_path if a file is already exists.
 
         Returns
         -------
         Self
-            New `Fits` object that has WCS headers.
-        """
-        self.logger.info("Solving field")
+            `Fits` object of aligned image.
 
-        return self
+        Raises
+        ------
+        Unsolvable
+            when the data is unsolvable or timeout
+        """
+        try:
+            self.logger.info("Solving field")
+            ast = AstrometryNet()
+            ast.api_key = api_key
+            wcs_header = ast.solve_from_image(abs(self), force_image_upload=True)
+            return self.__class__.from_data_header(self.data(), header=wcs_header, output=output, override=override)
+        except Exception as error:
+            self.logger.error(error)
+            raise Unsolvable("Cannot solve")
 
     def zero_correction(self, master_zero: Self, output: Optional[str] = None,
                         override: bool = False, force: bool = False) -> Self:
@@ -1506,7 +1545,7 @@ class Fits(Data):
         Parameters
         ----------
         angle: float, int
-            rotation angle
+            rotation angle (radians)
         reshape: bool, default=False
             Reshape after rotate
         output: str, optional
@@ -1519,6 +1558,47 @@ class Fits(Data):
         Self
             rotated `Fits` object
         """
+        self.logger.info("Rotating the image")
+
         angle_degree = angle * 180 / math.pi
         data = rotate(self.data(), angle_degree, reshape=reshape)
         return self.__class__.from_data_header(data, header=self.pure_header(), output=output, override=override)
+
+    def crop(self, x: int, y: int, width: int, height: int,
+             output: Optional[str] = None, override: bool = False) -> Self:
+        """
+        Crop the data of `Fits` object
+
+        Parameters
+        ----------
+        x: int
+            x coordinate of top left
+        y: int
+            y coordinate of top left
+        width: int
+            Width of the cropped image
+        height: int
+            Height of the cropped image
+        output: str, optional
+            Path of the new fits file.
+        override: bool, default=False
+            If True will overwrite the output if a file is already exists.
+
+        Returns
+        -------
+        Self
+            rotated `Fits` object
+
+        Raises
+        ------
+        IndexError
+            when the data is empty after cropping
+        """
+        self.logger.info("Cropping the image")
+
+        data = self.data()[y:y + height, x:x + width]
+
+        if data.size == 0:
+            raise IndexError("Out of boundaries")
+
+        return self.__class__.from_data_header(data, output=output, override=override)

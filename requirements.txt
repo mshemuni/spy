@@ -1,5 +1,6 @@
 astroalign
 astropy
+astroquery
 ccdproc
 matplotlib
 mpl_point_clicker

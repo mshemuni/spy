@@ -16,3 +16,7 @@ class OverCorrection(Exception):
 
 class CardNotFound(Exception):
     """Raised when the key not found in the header"""
+
+
+class Unsolvable(Exception):
+    """Raised when the key not found in the header"""

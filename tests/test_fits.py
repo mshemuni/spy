@@ -497,14 +497,22 @@ class TestFits(unittest.TestCase):
             rotated.data(), rotated_data
         )
 
+    def test_crop(self):
+        cropped = self.SAMPLE.crop(20, 12, 220, 200)
+
+        cropped_data = self.SAMPLE.data()[12:212, 20:240]
+        np.testing.assert_array_equal(
+            cropped.data(), cropped_data
+        )
+
+    def test_crop_out_of_boundaries(self):
+        with self.assertRaises(IndexError):
+            _ = self.SAMPLE.crop(1000, 1000, 10, 10)
+
     def test_align(self):
         shifted = self.SAMPLE.shift(10, 10)
         aligned = self.SAMPLE.align(shifted)
         self.assertIsInstance(aligned, Fits)
-
-    def test_solve_field(self):
-        solved = self.SAMPLE.solve_filed()
-        self.assertIsInstance(solved, Fits)
 
     def test_zero_correction(self):
         zero_corrected = self.SAMPLE.zero_correction(self.SAMPLE)

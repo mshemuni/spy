@@ -130,7 +130,10 @@ class Data(ABC):
         ...
 
     @abstractmethod
-    def solve_filed(self) -> Self:
+    def solve_filed(self, api_key: str, solve_timeout: int = 120,
+                    force_image_upload: bool = False,
+                    output: Optional[str] = None, override: bool = False
+                    ) -> Self:
         ...
 
     @abstractmethod
@@ -193,6 +196,11 @@ class Data(ABC):
     @abstractmethod
     def rotate(self, angle: Union[float, int], reshape: bool = False, output: Optional[str] = None,
                override: bool = False) -> Self:
+        ...
+
+    @abstractmethod
+    def crop(self, x: int, y: int, width: int, height: int,
+             output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
 
@@ -308,8 +316,14 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def rotate(self, angle: Union[List[Union[float]], float, int], reshape: bool = False,
+    def rotate(self, angle: Union[List[Union[float, int]], float, int], reshape: bool = False,
                output: Optional[str] = None) -> Self:
+        ...
+
+    @abstractmethod
+    def crop(self, xs: Union[List[int], int], ys: Union[List[int], int],
+             widths: Union[List[int], int], heights: Union[List[int], int],
+             output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
@@ -322,7 +336,10 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def solve_filed(self) -> Self:
+    def solve_filed(self, api_key: str, reference: Union[Fits, int] = 0,
+                    solve_timeout: int = 120, force_image_upload: bool = False,
+                    max_control_points: int = 50, min_area: int = 5,
+                    output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod
