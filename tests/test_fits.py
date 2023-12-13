@@ -28,8 +28,7 @@ class TestFits(unittest.TestCase):
         string = repr(self.SAMPLE)
 
         self.assertTrue(string.endswith("')"))
-        self.assertTrue(
-            string.startswith(f"{self.SAMPLE.__class__.__name__}.from_path"))
+        self.assertTrue(string.startswith(f"{self.SAMPLE.__class__.__name__}"))
 
     def test___add__(self):
         new_fits = self.SAMPLE + self.SAMPLE

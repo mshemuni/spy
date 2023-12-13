@@ -56,7 +56,8 @@ class Fits(Data):
         return f"{self.__class__.__name__}(@: '{id(self)}', path:'{self.file}')"
 
     def __repr__(self) -> str:
-        return f"{self.__class__.__name__}.from_path('{self.file}')"
+        return self.__str__()
+        # return f"{self.__class__.__name__}.from_path('{self.file}')"
 
     def __del__(self) -> None:
         if self.is_temp:

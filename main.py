@@ -1,6 +1,6 @@
 from spy import Fits
 
-sample = Fits.sample()
+fits = Fits.sample()
+print(fits.data())
+print(fits.add(2).data())
 
-sample.hedit("TEST", 22)
-print(sample.header())

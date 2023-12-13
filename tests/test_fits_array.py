@@ -24,6 +24,12 @@ class TestFitsArray(unittest.TestCase):
         self.assertTrue(string.endswith("')"))
         self.assertTrue(string.startswith(f"{self.SAMPLE.__class__.__name__}"))
 
+    def test___repr__(self):
+        string = repr(self.SAMPLE)
+
+        self.assertTrue(string.endswith("')"))
+        self.assertTrue(string.startswith(f"{self.SAMPLE.__class__.__name__}"))
+
     def test___add__(self):
         new_fits_array = self.SAMPLE + self.SAMPLE
         for fits, new_fits in zip(self.SAMPLE, new_fits_array):

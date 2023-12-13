@@ -46,6 +46,9 @@ class FitsArray(DataArray):
     def __str__(self) -> str:
         return f"{self.__class__.__name__}(@: '{id(self)}', nof:'{len(self)}')"
 
+    def __repr__(self) -> str:
+        return self.__str__()
+
     def __iter__(self) -> Iterator[Fits]:
         for x in self.fits_list:
             yield x
