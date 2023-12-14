@@ -1451,7 +1451,6 @@ class Fits(Data):
                     exposure_to_use
                 )
 
-
                 try:
                     sky = self.pixels_to_skys(phot_line["xcenter"].value, phot_line["ycenter"].value).iloc[0].sky
                 except Exception as e:
