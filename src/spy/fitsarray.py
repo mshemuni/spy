@@ -1069,7 +1069,7 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
-    def solve_filed(self, api_key: str, reference: Union[Fits, int] = 0,
+    def solve_field(self, api_key: str, reference: Union[Fits, int] = 0,
                     solve_timeout: int = 120, force_image_upload: bool = False,
                     max_control_points: int = 50, min_area: int = 5,
                     output: Optional[str] = None) -> Self:
@@ -1128,7 +1128,7 @@ class FitsArray(DataArray):
             self.logger.error("reference cannot be FitsArray")
             raise ValueError("reference cannot be FitsArray")
 
-        solved_fits = the_reference.solve_filed(
+        solved_fits = the_reference.solve_field(
             api_key, solve_timeout=solve_timeout, force_image_upload=force_image_upload
         )
 

@@ -995,7 +995,7 @@ class Fits(Data):
             klkr.get_positions()["source"], columns=[
                 "xcentroid", "ycentroid"])
 
-    def solve_filed(self, api_key: str, solve_timeout: int = 120,
+    def solve_field(self, api_key: str, solve_timeout: int = 120,
                     force_image_upload: bool = False,
                     output: Optional[str] = None, override: bool = False
                     ) -> Self:
