@@ -27,6 +27,7 @@ from typing import List, Union, Any, Optional, Iterator, Dict
 
 from astropy.io.fits.header import Header
 from astropy.io import fits as fts
+from astropy.coordinates import SkyCoord
 
 
 class FitsArray(DataArray):
@@ -1837,3 +1838,66 @@ class FitsArray(DataArray):
         """
         fixed_weights = self.__prepare_weights(weights)
         return self.combine(method=method, clipping=clipping, weights=fixed_weights, output=output, override=override)
+
+    def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
+                       ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:
+        """
+        Calculate Sky Coordinate of given Pixel
+
+        Parameters
+        ----------
+        xs: Union[List[Union[int, float]], int, float]
+            x coordinate(s) of pixel
+        ys: Union[List[Union[int, float]], int, float]
+            y coordinate(s) of pixel
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataa frame of pixel and sky coordinates
+
+        Raises
+        ------
+        ValueError
+            when the length of xs and ys is not equal
+        Unsolvable
+            when header does not contain WCS solution
+
+        """
+        self.logger.info("Calculating pixels to skys")
+
+        return pd.concat(
+            [
+                each.pixels_to_skys(xs, ys)
+                for each in self
+            ]
+        )
+
+    def skys_to_pixels(self, skys: Union[List[SkyCoord], SkyCoord]) -> pd.DataFrame:
+        """
+        Calculate Pixel Coordinate of given Sky
+
+        Parameters
+        ----------
+        skys: Union[List[SkyCoord], SkyCoord]
+            x coordinate(s) of pixel
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataa frame of pixel and sky coordinates
+
+        Raises
+        ------
+        Unsolvable
+            when header does not contain WCS solution
+
+        """
+        self.logger.info("Calculating skys to pixels")
+
+        return pd.concat(
+            [
+                each.skys_to_pixels(skys)
+                for each in self
+            ]
+        )

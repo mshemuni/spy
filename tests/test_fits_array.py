@@ -1,6 +1,8 @@
 import math
 import unittest
 
+from astropy import units
+from astropy.coordinates import SkyCoord
 from astropy.nddata import CCDData
 from scipy.ndimage import rotate
 from sep import Background
@@ -11,7 +13,7 @@ import numpy as np
 
 from astropy.io.fits.header import Header
 
-from spy.error import NumberOfElementError
+from spy.error import NumberOfElementError, Unsolvable
 
 
 class TestFitsArray(unittest.TestCase):
@@ -1904,6 +1906,102 @@ class TestFitsArray(unittest.TestCase):
             combined.data(),
             np.median([each.data() for each in self.SAMPLE], axis=0),
         )
+
+    def test_pixels_to_skys(self):
+        skys = self.SAMPLE.pixels_to_skys(2, 2)
+        for sky in skys.sky.tolist():
+            self.assertAlmostEquals(
+                sky.ra.value, 85.39916173
+            )
+            self.assertAlmostEquals(
+                sky.dec.value, -2.58265558
+            )
+
+    def test_pixels_to_skys_list(self):
+        sky = self.SAMPLE.pixels_to_skys([2, 200], [2, 200])
+        for key, df in sky.groupby("image"):
+            self.assertAlmostEquals(
+                df.iloc[0].sky.ra.value, 85.39916173, places=3
+            )
+            self.assertAlmostEquals(
+                df.iloc[0].sky.dec.value, -2.58265558, places=3
+            )
+
+            self.assertAlmostEquals(
+                df.iloc[1].sky.ra.value, 85.34366079, places=3
+            )
+            self.assertAlmostEquals(
+                df.iloc[1].sky.dec.value, -2.52720021, places=3
+            )
+
+    def test_pixels_to_skys_not_equal(self):
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.pixels_to_skys([2, 200, 300], [2, 200])
+
+        with self.assertRaises(ValueError):
+            _ = self.SAMPLE.pixels_to_skys(2, [2, 200])
+
+    def test_pixels_to_skys_unsolvable(self):
+        sample = FitsArray(
+            [
+                Fits.from_data_header(fits.data())
+                for fits in self.SAMPLE
+            ]
+        )
+        with self.assertRaises(Unsolvable):
+            _ = sample.pixels_to_skys(2, 2)
+
+    def test_skys_to_pixels(self):
+        sc = SkyCoord(ra=85.39916173 * units.degree, dec=-2.58265558 * units.degree)
+
+        pixel = self.SAMPLE.skys_to_pixels(sc)
+        self.assertAlmostEquals(
+            pixel.iloc[0].x, 2, places=3
+        )
+        self.assertAlmostEquals(
+            pixel.iloc[0].y, 2, places=3
+        )
+
+    def test_sky_to_pixel_list(self):
+        sc = [
+            SkyCoord(ra=85.39916173 * units.degree, dec=-2.58265558 * units.degree),
+            SkyCoord(ra=85.34366079 * units.degree, dec=-2.52720021 * units.degree)
+        ]
+        pixel = self.SAMPLE.skys_to_pixels(sc)
+
+        for key, px in pixel.groupby("image"):
+            self.assertAlmostEquals(
+                px.iloc[0].x, 2, places=3
+            )
+            self.assertAlmostEquals(
+                px.iloc[0].y, 2, places=3
+            )
+
+            self.assertAlmostEquals(
+                px.iloc[1].x, 200, places=3
+            )
+            self.assertAlmostEquals(
+                px.iloc[1].y, 200, places=3
+            )
+
+    def test_skys_to_pixels_unsolvable(self):
+        sc = SkyCoord(ra=85.39916173 * units.hourangle, dec=-2.58265558 * units.hourangle)
+
+        with self.assertRaises(Unsolvable):
+            _ = self.SAMPLE.skys_to_pixels(sc)
+
+    def test_skys_to_pixels_unsolvable_no_header(self):
+        sc = SkyCoord(ra=85.39916173 * units.degree, dec=-2.58265558 * units.degree)
+
+        sample = FitsArray(
+            [
+                Fits.from_data_header(fits.data())
+                for fits in self.SAMPLE
+            ]
+        )
+
+        with self.assertRaises(Unsolvable):
+            _ = sample.skys_to_pixels(sc)
 
 
 if __name__ == '__main__':

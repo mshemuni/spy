@@ -13,6 +13,7 @@ from sep import Background
 
 import pandas as pd
 from astropy.nddata import CCDData
+from astropy.coordinates import SkyCoord
 
 NUMERICS = Union[float, int, List[Union[float, int]]]
 
@@ -201,6 +202,15 @@ class Data(ABC):
     @abstractmethod
     def crop(self, x: int, y: int, width: int, height: int,
              output: Optional[str] = None, override: bool = False) -> Self:
+        ...
+
+    @abstractmethod
+    def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
+                       ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:
+        ...
+
+    @abstractmethod
+    def skys_to_pixels(self, skys: Union[List[SkyCoord], SkyCoord]) -> pd.DataFrame:
         ...
 
 
@@ -417,4 +427,13 @@ class DataArray(ABC):
     def flat_combine(self, method: str = "median", clipping: Optional[str] = None,
                      weights: Optional[Union[List[str], List[Union[float, int]]]] = None,
                      output: Optional[str] = None, override: bool = False) -> Fits:
+        ...
+
+    @abstractmethod
+    def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
+                       ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:
+        ...
+
+    @abstractmethod
+    def skys_to_pixels(self, skys: Union[List[SkyCoord], SkyCoord]) -> pd.DataFrame:
         ...

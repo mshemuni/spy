@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from astropy.wcs import WCS
 from astroquery.astrometry_net import AstrometryNet
 
 from .error import NothingToDo, AlignError, NumberOfElementError, OverCorrection, CardNotFound, Unsolvable
@@ -22,6 +23,7 @@ from astropy.nddata import CCDData
 from astropy.stats import sigma_clipped_stats
 from astropy.visualization import ZScaleInterval
 from photutils.detection import DAOStarFinder
+from astropy.coordinates import SkyCoord
 
 from scipy.ndimage import rotate
 
@@ -1602,3 +1604,95 @@ class Fits(Data):
             raise IndexError("Out of boundaries")
 
         return self.__class__.from_data_header(data, output=output, override=override)
+
+    def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
+                       ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:
+        """
+        Calculate Sky Coordinate of given Pixel
+
+        Parameters
+        ----------
+        xs: Union[List[Union[int, float]], int, float]
+            x coordinate(s) of pixel
+        ys: Union[List[Union[int, float]], int, float]
+            y coordinate(s) of pixel
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataa frame of pixel and sky coordinates
+
+        Raises
+        ------
+        ValueError
+            when the length of xs and ys is not equal
+        Unsolvable
+            when header does not contain WCS solution
+
+        """
+        self.logger.info("Calculating pixels to skys")
+
+        xs_to_use = xs if isinstance(xs, list) else [xs]
+        ys_to_use = ys if isinstance(ys, list) else [ys]
+
+        if len(xs_to_use) != len(ys_to_use):
+            raise ValueError("xs and ys must be equal in length")
+
+        data = []
+
+        w = WCS(self.pure_header())
+
+        for x, y in zip(xs_to_use, ys_to_use):
+            sky = w.pixel_to_world(x, y)
+            if not isinstance(sky, SkyCoord):
+                raise Unsolvable("Plate is not solved")
+
+            data.append([abs(self), x, y, sky])
+
+        return pd.DataFrame(
+            data,
+            columns=["image", "x", "y", "sky"]
+        ).set_index("image")
+
+    def skys_to_pixels(self, skys: Union[List[SkyCoord], SkyCoord]) -> pd.DataFrame:
+        """
+        Calculate Pixel Coordinate of given Sky
+
+        Parameters
+        ----------
+        skys: Union[List[SkyCoord], SkyCoord]
+            x coordinate(s) of pixel
+
+        Returns
+        -------
+        pd.DataFrame
+            Dataa frame of pixel and sky coordinates
+
+        Raises
+        ------
+        Unsolvable
+            when header does not contain WCS solution
+
+        """
+        self.logger.info("Calculating skys to pixels")
+
+        skys_to_use = skys if isinstance(skys, list) else [skys]
+
+        data = []
+
+        w = WCS(self.pure_header())
+
+        for sky in skys_to_use:
+            try:
+                pixels = w.world_to_pixel(sky)
+            except ValueError:
+                raise Unsolvable("Plate is not solved")
+            if np.isnan(pixels).any():
+                raise Unsolvable("Plate is not solved")
+
+            data.append([abs(self), sky, *pixels])
+
+        return pd.DataFrame(
+            data,
+            columns=["image", "sky", "x", "y"]
+        ).set_index("image")
