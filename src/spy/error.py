@@ -19,4 +19,4 @@ class CardNotFound(Exception):
 
 
 class Unsolvable(Exception):
-    """Raised when the key not found in the header"""
+    """Raised when the data is not plate solvable"""

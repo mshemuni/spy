@@ -1343,20 +1343,26 @@ class Fits(Data):
             )
             for x, y, flux, flux_err, flag in zip(new_xs, new_ys, fluxes,
                                                   flux_errs, flags):
+                try:
+                    sky = self.pixels_to_skys(x, y).iloc[0].sky
+                except Exception as e:
+                    self.logger.info(f"Could not get ra, dec. {e}")
+                    sky = None
+
                 value = clean_d[int(x)][int(y)]
                 snr = np.nan if value < 0 else math.sqrt(value)
                 mag, mag_err = self.flux_to_mag(flux, flux_err,
                                                 exposure_to_use)
                 table.append(
                     [
-                        abs(self), "sep", x, y, new_r, flux, flux_err,
+                        abs(self), "sep", x, y, sky, new_r, flux, flux_err,
                         flag, snr, mag, mag_err, *headers_
                     ]
                 )
         return pd.DataFrame(
             table,
             columns=[
-                "image", "package", "xcentroid", "ycentroid", "aperture",
+                "image", "package", "xcentroid", "ycentroid", "sky", "aperture",
                 "flux", "flux_error", "flag", "snr", "mag", "merr", *keys_
             ]
         ).set_index("image")
@@ -1444,11 +1450,21 @@ class Fits(Data):
                     phot_line["aperture_sum_err"],
                     exposure_to_use
                 )
+
+
+                try:
+                    sky = self.pixels_to_skys(phot_line["xcenter"].value, phot_line["ycenter"].value).iloc[0].sky
+                except Exception as e:
+                    self.logger.info(f"Could not get ra, dec. {e}")
+                    sky = None
+
                 table.append(
                     [
                         abs(self), "phu",
                         phot_line["xcenter"].value,
-                        phot_line["ycenter"].value, new_r,
+                        phot_line["ycenter"].value,
+                        sky,
+                        new_r,
                         phot_line["aperture_sum"],
                         phot_line["aperture_sum_err"],
                         None, snr, mag, mag_err, *headers_
@@ -1458,7 +1474,7 @@ class Fits(Data):
         return pd.DataFrame(
             table,
             columns=[
-                "image", "package", "xcentroid", "ycentroid", "aperture",
+                "image", "package", "xcentroid", "ycentroid", "sky", "aperture",
                 "flux", "flux_error", "flag", "snr", "mag", "merr", *keys_
             ]
         ).set_index("image")
