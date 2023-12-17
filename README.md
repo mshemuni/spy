@@ -7,7 +7,7 @@ Simpler PYraf
 ![UML](docs/spy.png "spy UML")
 
 [![spy](https://github.com/mshemuni/spy/actions/workflows/python-package.yml/badge.svg)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)
-[![spy](https://img.shields.io/badge/coverage-81%25-31c553)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)
+[![spy](https://img.shields.io/badge/coverage-79%25-31c553)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)
 [![spy](https://img.shields.io/badge/Win-%E2%9C%93-f5f5f5?logo=windows11)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)
 [![spy](https://img.shields.io/badge/Ubuntu-%E2%9C%93-e95420?logo=Ubuntu)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)
 [![spy](https://img.shields.io/badge/MacOS-%E2%9C%93-dadada?logo=macos)](https://github.com/mshemuni/spy/actions/workflows/python-package.yml)

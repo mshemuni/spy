@@ -1,14 +1,11 @@
-from spy import FitsArray, Fits
+from astropy import units
+from astropy.coordinates import SkyCoord
 
-# fits = FitsArray(
-#     [Fits.from_data_header(each.data()) for each in FitsArray.sample()]
-# )
+from spy import FitsArray
 
-fits = FitsArray.sample()
-sources = fits.extract()
+fa = FitsArray.sample()
+sc = SkyCoord(ra=85.39916173 * units.degree, dec=-2.58265558 * units.degree)
 
-phot = fits.photometry(
-    sources["xcentroid"].tolist(), sources["ycentroid"].tolist(),
-    10
-)
-print(phot.sky)
+pixel = fa.skys_to_pixels(sc)
+# print(pixel[["xcentroid", "ycentroid"]].to_numpy().tolist())
+print(pixel[["xcentroid", "ycentroid"]].to_numpy().tolist())

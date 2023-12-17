@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from astropy.wcs import WCS
+from astropy.wcs.utils import fit_wcs_from_points
 from astroquery.astrometry_net import AstrometryNet
 
 from .error import NothingToDo, AlignError, NumberOfElementError, OverCorrection, CardNotFound, Unsolvable
@@ -18,6 +19,7 @@ from photutils.utils import calc_total_error
 from typing_extensions import Self
 
 import astroalign
+
 from astropy import units
 from astropy.nddata import CCDData
 from astropy.stats import sigma_clipped_stats
@@ -25,7 +27,7 @@ from astropy.visualization import ZScaleInterval
 from photutils.detection import DAOStarFinder
 from astropy.coordinates import SkyCoord
 
-from scipy.ndimage import rotate
+from scipy import ndimage
 
 import numpy as np
 import pandas as pd
@@ -167,16 +169,16 @@ class Fits(Data):
         """
         self.logger.info("Calculating Flux to Magnitude")
 
-        mag = -2.5 * math.log10(flux)
+        mag = -2.5 * np.log10(flux)
         if exptime != 0:
-            mag += 2.5 * math.log10(exptime)
+            mag += 2.5 * np.log10(exptime)
 
         if flux_error <= 0:
             mag_err = 0.0
         else:
             mag_err = 1.0857 * flux_error / flux
 
-        if math.isinf(mag_err):
+        if np.isinf(mag_err):
             mag_err = 0
 
         return mag + self.ZMag, mag_err
@@ -243,7 +245,7 @@ class Fits(Data):
     def sample(cls) -> Self:
         """
         Creates a sample `Fits` object
-        see: http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits
+        see: https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits
 
 
         Returns
@@ -925,16 +927,40 @@ class Fits(Data):
             raise ValueError(f"Other must be a {self.__class__}")
 
         try:
-            registered_image, _ = astroalign.register(
-                self.data(),
-                reference.data(),
+            data = self.data()
+            reference_data = reference.data()
+            w = WCS(self.pure_header())
+
+            t, (source_list, target_list) = astroalign.find_transform(
+                source=data,
+                target=reference_data,
                 max_control_points=max_control_points,
                 min_area=min_area,
-                fill_value=0
             )
 
+            registered_image, _ = astroalign.apply_transform(
+                t, data, reference_data, 0, False
+            )
+
+            try:
+
+                xs = source_list[:, 0]
+                ys = source_list[:, 1]
+
+                new_xs = target_list[:, 0]
+                new_ys = target_list[:, 1]
+
+                skys = w.pixel_to_world(xs.tolist(), ys.tolist())
+                w = fit_wcs_from_points([new_xs, new_ys], skys)
+            except Unsolvable:
+                self.logger.info("No WCS found in header")
+            except AttributeError as e:
+                self.logger.info(e)
+
+            temp_header = self.pure_header().copy()
+            temp_header.extend(w.to_header(), unique=True)
             return self.__class__.from_data_header(
-                registered_image, header=fts.getheader(self.file),
+                registered_image, header=temp_header,
                 output=output, override=override
             )
         except ValueError:
@@ -1015,7 +1041,7 @@ class Fits(Data):
             If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.
             This option will almost always take longer than finding sources locally.
             It will even take longer than installing photutils and then rerunning this.
-            Even if this is False the image will be upload unless photutils is installed.
+            Even if this is False the image will be uploaded unless photutils is installed.
             see: [1]
         output: str
             New path to save the file.
@@ -1551,10 +1577,26 @@ class Fits(Data):
         elif y > 0:
             shifted_data[0:y, :] = 0
 
-        return self.from_data_header(shifted_data, self.pure_header(),
+        w = WCS(self.pure_header())
+
+        try:
+            highest = min(self.data().shape)
+            xs = np.random.randint(0, highest, 20)
+            ys = np.random.randint(0, highest, 20)
+
+            skys = w.pixel_to_world(xs.tolist(), ys.tolist())
+            w = fit_wcs_from_points([xs + x, ys + y], skys)
+        except Unsolvable:
+            self.logger.info("No WCS found in header")
+        except AttributeError as e:
+            self.logger.info(e)
+
+        temp_header = self.pure_header().copy()
+        temp_header.update(w.to_header())
+        return self.from_data_header(shifted_data, header=w.to_header(),
                                      output=output, override=override)
 
-    def rotate(self, angle: Union[float, int], reshape: bool = False,
+    def rotate(self, angle: Union[float, int],
                output: Optional[str] = None, override: bool = False) -> Self:
         """
         Rotates the data of `Fits` object
@@ -1563,8 +1605,6 @@ class Fits(Data):
         ----------
         angle: float, int
             rotation angle (radians)
-        reshape: bool, default=False
-            Reshape after rotate
         output: str, optional
             Path of the new fits file.
         override: bool, default=False
@@ -1578,8 +1618,37 @@ class Fits(Data):
         self.logger.info("Rotating the image")
 
         angle_degree = angle * 180 / math.pi
-        data = rotate(self.data(), angle_degree, reshape=reshape)
-        return self.__class__.from_data_header(data, header=self.pure_header(), output=output, override=override)
+        data = ndimage.rotate(self.data(), angle_degree, reshape=False)
+
+        w = WCS(self.pure_header())
+        try:
+            # cd_matrix = w.wcs.cd
+            shape = self.data().shape
+            highest = min(self.data().shape)
+            xs = np.random.randint(0, highest, 20)
+            ys = np.random.randint(0, highest, 20)
+
+            skys = w.pixel_to_world(xs.tolist(), ys.tolist())
+
+            center = np.array(shape) / 2.0
+            rotation_matrix = np.array([[np.cos(-angle), -np.sin(-angle)],
+                                        [np.sin(-angle), np.cos(-angle)]])
+            translated_coords = np.array([xs, ys]) - center[:, np.newaxis]
+            new_coords = np.dot(rotation_matrix, translated_coords) + center[:, np.newaxis]
+            new_coords = np.round(new_coords).astype(int)
+            new_coords[0] = np.clip(new_coords[0], 0, data.shape[0] - 1)
+            new_coords[1] = np.clip(new_coords[1], 0, data.shape[1] - 1)
+
+            w = fit_wcs_from_points([new_coords[0], new_coords[1]], skys)
+
+        except Unsolvable:
+            self.logger.info("No WCS found in header")
+        except AttributeError as e:
+            self.logger.info(e)
+
+        # temp_header = self.pure_header().copy()
+        # temp_header.extend(w.to_header(), unique=True)
+        return self.__class__.from_data_header(data, header=w.to_header(), output=output, override=override)
 
     def crop(self, x: int, y: int, width: int, height: int,
              output: Optional[str] = None, override: bool = False) -> Self:
@@ -1604,7 +1673,7 @@ class Fits(Data):
         Returns
         -------
         Self
-            rotated `Fits` object
+            cropped `Fits` object
 
         Raises
         ------
@@ -1615,10 +1684,19 @@ class Fits(Data):
 
         data = self.data()[y:y + height, x:x + width]
 
+        w = WCS(self.pure_header())
+
         if data.size == 0:
             raise IndexError("Out of boundaries")
 
-        return self.__class__.from_data_header(data, output=output, override=override)
+        try:
+            w = w[y:y + height, x:x + width]
+        except Unsolvable:
+            self.logger.info("No WCS found in header")
+        except AttributeError as e:
+            self.logger.info(e)
+
+        return self.__class__.from_data_header(data, header=w.to_header(), output=output, override=override)
 
     def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
                        ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:
@@ -1662,11 +1740,14 @@ class Fits(Data):
             if not isinstance(sky, SkyCoord):
                 raise Unsolvable("Plate is not solved")
 
+            # self.show()
+            # print(x, y)
+            # print(sky)
             data.append([abs(self), x, y, sky])
 
         return pd.DataFrame(
             data,
-            columns=["image", "x", "y", "sky"]
+            columns=["image", "xcentroid", "ycentroid", "sky"]
         ).set_index("image")
 
     def skys_to_pixels(self, skys: Union[List[SkyCoord], SkyCoord]) -> pd.DataFrame:
@@ -1705,9 +1786,9 @@ class Fits(Data):
             if np.isnan(pixels).any():
                 raise Unsolvable("Plate is not solved")
 
-            data.append([abs(self), sky, *pixels])
+            data.append([abs(self), sky, float(pixels[0]), float(pixels[1])])
 
         return pd.DataFrame(
             data,
-            columns=["image", "sky", "x", "y"]
+            columns=["image", "sky", "xcentroid", "ycentroid"]
         ).set_index("image")

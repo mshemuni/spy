@@ -899,10 +899,10 @@ class TestFits(unittest.TestCase):
         sc = SkyCoord(ra=85.39916173 * units.degree, dec=-2.58265558 * units.degree)
         pixel = self.SAMPLE.skys_to_pixels(sc)
         self.assertAlmostEquals(
-            pixel.iloc[0].x, 2, places=3
+            pixel.iloc[0].xcentroid, 2, places=3
         )
         self.assertAlmostEquals(
-            pixel.iloc[0].y, 2, places=3
+            pixel.iloc[0].ycentroid, 2, places=3
         )
 
     def test_sky_to_pixel_list(self):
@@ -912,17 +912,17 @@ class TestFits(unittest.TestCase):
         ]
         pixel = self.SAMPLE.skys_to_pixels(sc)
         self.assertAlmostEquals(
-            pixel.iloc[0].x, 2, places=3
+            pixel.iloc[0].xcentroid, 2, places=3
         )
         self.assertAlmostEquals(
-            pixel.iloc[0].y, 2, places=3
+            pixel.iloc[0].ycentroid, 2, places=3
         )
 
         self.assertAlmostEquals(
-            pixel.iloc[1].x, 200, places=3
+            pixel.iloc[1].xcentroid, 200, places=3
         )
         self.assertAlmostEquals(
-            pixel.iloc[1].y, 200, places=3
+            pixel.iloc[1].ycentroid, 200, places=3
         )
 
     def test_skys_to_pixels_unsolvable(self):

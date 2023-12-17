@@ -1,8 +1,10 @@
 from __future__ import annotations
 
+import astroalign
 from astropy.wcs import WCS
+from astropy.wcs.utils import fit_wcs_from_points
 
-from .error import NumberOfElementError, OverCorrection
+from .error import NumberOfElementError, OverCorrection, Unsolvable
 from .models import DataArray, NUMERICS
 from .fits import Fits
 from .utils import Fixer, Check
@@ -26,7 +28,6 @@ from pathlib import Path
 from typing import List, Union, Any, Optional, Iterator, Dict
 
 from astropy.io.fits.header import Header
-from astropy.io import fits as fts
 from astropy.coordinates import SkyCoord
 
 
@@ -188,7 +189,7 @@ class FitsArray(DataArray):
     def sample(cls, numer_of_samples: int = 10) -> Self:
         """
         Creates a sample `FitsArray` object
-        see: http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits
+        see: https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits
 
         Parameters
         ----------
@@ -206,8 +207,8 @@ class FitsArray(DataArray):
                 f = Fits.sample()
                 shifted = f.shift(i * 10, i * 10)
                 fits_objects.append(shifted)
-            except Exception:
-                pass
+            except Exception as e:
+                _ = e
         return cls(fits_objects)
 
     def merge(self, other: Self) -> None:
@@ -892,7 +893,7 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
-    def rotate(self, angle: Union[List[Union[float, int]], float, int], reshape: bool = False,
+    def rotate(self, angle: Union[List[Union[float, int]], float, int],
                output: Optional[str] = None) -> Self:
         """
         Rotates the data of `FitsArray` object
@@ -901,8 +902,6 @@ class FitsArray(DataArray):
         ----------
         angle: Union[List[Union[float, int]], float, int]
             Rotation angle(s) (radians)
-        reshape: bool, default=False
-            Reshape after rotate
         output: str, optional
             New path to save the files.
 
@@ -931,7 +930,7 @@ class FitsArray(DataArray):
         for fits, output_fit, ang in zip(self, outputs, to_rotate):
 
             try:
-                rotated = fits.rotate(ang, reshape=reshape, output=output_fit)
+                rotated = fits.rotate(ang, output=output_fit)
                 fits_array.append(rotated)
             except Exception as error:
                 self.logger.error(error)
@@ -1093,7 +1092,7 @@ class FitsArray(DataArray):
             If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.
             This option will almost always take longer than finding sources locally.
             It will even take longer than installing photutils and then rerunning this.
-            Even if this is False the image will be upload unless photutils is installed.
+            Even if this is False the image will be uploaded unless photutils is installed.
             see: [1]
         max_control_points: int, default=50
             The maximum number of control point-sources to
@@ -1132,22 +1131,36 @@ class FitsArray(DataArray):
             api_key, solve_timeout=solve_timeout, force_image_upload=force_image_upload
         )
 
-        w = WCS(solved_fits.pure_header())
-        wcs_headers = w.to_header()
-        aligned = self.align(
-            reference=the_reference,
-            max_control_points=max_control_points, min_area=min_area,
-            output=output
-        )
+        ref_w = WCS(solved_fits.pure_header())
 
         fits_array = []
+        outputs = Fixer.outputs(output, self)
 
-        for fits in aligned:
-            with fts.open(abs(fits), "update") as hdu:
-                for key in wcs_headers:
-                    hdu[0].header[key] = wcs_headers[key]
+        for fits, output_fit in zip(self, outputs):
+            t, (source_list, target_list) = astroalign.find_transform(
+                source=fits.data(),
+                target=the_reference.data(),
+                max_control_points=max_control_points,
+                min_area=min_area,
+            )
+            try:
+                xs = target_list[:, 0].flatten()
+                ys = target_list[:, 1].flatten()
 
-            fits_array.append(fits)
+                new_xs = source_list[:, 0].flatten()
+                new_ys = source_list[:, 1].flatten()
+
+                skys = ref_w.pixel_to_world(xs.tolist(), ys.tolist())
+                w = fit_wcs_from_points([new_xs, new_ys], skys)
+
+                temp_header = fits.pure_header().copy()
+                temp_header.extend(w.to_header(), unique=True)
+                fits_array.append(Fits.from_data_header(fits.data(), header=temp_header,
+                                                        output=output_fit))
+            except Unsolvable:
+                self.logger.info("No WCS found in header")
+            except AttributeError as e:
+                self.logger.info(e)
 
         return self.__class__(fits_array)
 
@@ -1865,7 +1878,6 @@ class FitsArray(DataArray):
 
         """
         self.logger.info("Calculating pixels to skys")
-
         return pd.concat(
             [
                 each.pixels_to_skys(xs, ys)

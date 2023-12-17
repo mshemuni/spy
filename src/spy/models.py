@@ -195,7 +195,7 @@ class Data(ABC):
         ...
 
     @abstractmethod
-    def rotate(self, angle: Union[float, int], reshape: bool = False, output: Optional[str] = None,
+    def rotate(self, angle: Union[float, int], output: Optional[str] = None,
                override: bool = False) -> Self:
         ...
 
@@ -326,7 +326,7 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def rotate(self, angle: Union[List[Union[float, int]], float, int], reshape: bool = False,
+    def rotate(self, angle: Union[List[Union[float, int]], float, int],
                output: Optional[str] = None) -> Self:
         ...
 
