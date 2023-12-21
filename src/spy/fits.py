@@ -957,8 +957,9 @@ class Fits(Data):
             except AttributeError as e:
                 self.logger.info(e)
 
-            temp_header = self.pure_header().copy()
-            temp_header.extend(w.to_header(), unique=True)
+            temp_header = Header()
+            # temp_header.extend(self.pure_header(), unique=True, update=True)
+            temp_header.extend(w.to_header(), unique=True, update=True)
             return self.__class__.from_data_header(
                 registered_image, header=temp_header,
                 output=output, override=override
@@ -1591,9 +1592,10 @@ class Fits(Data):
         except AttributeError as e:
             self.logger.info(e)
 
-        temp_header = self.pure_header().copy()
-        temp_header.update(w.to_header())
-        return self.from_data_header(shifted_data, header=w.to_header(),
+        temp_header = Header()
+        # temp_header.extend(self.pure_header(), unique=True, update=True)
+        temp_header.extend(w.to_header(), unique=True, update=True)
+        return self.from_data_header(shifted_data, header=temp_header,
                                      output=output, override=override)
 
     def rotate(self, angle: Union[float, int],
@@ -1646,9 +1648,10 @@ class Fits(Data):
         except AttributeError as e:
             self.logger.info(e)
 
-        # temp_header = self.pure_header().copy()
-        # temp_header.extend(w.to_header(), unique=True)
-        return self.__class__.from_data_header(data, header=w.to_header(), output=output, override=override)
+        temp_header = Header()
+        # temp_header.extend(self.pure_header(), unique=True, update=True)
+        temp_header.extend(w.to_header(), unique=True, update=True)
+        return self.__class__.from_data_header(data, header=temp_header, output=output, override=override)
 
     def crop(self, x: int, y: int, width: int, height: int,
              output: Optional[str] = None, override: bool = False) -> Self:
@@ -1696,7 +1699,10 @@ class Fits(Data):
         except AttributeError as e:
             self.logger.info(e)
 
-        return self.__class__.from_data_header(data, header=w.to_header(), output=output, override=override)
+        temp_header = Header()
+        # temp_header.extend(self.pure_header(), unique=True, update=True)
+        temp_header.extend(w.to_header(), unique=True, update=True)
+        return self.__class__.from_data_header(data, header=temp_header, output=output, override=override)
 
     def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
                        ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:

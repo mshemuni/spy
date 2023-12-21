@@ -1153,7 +1153,8 @@ class FitsArray(DataArray):
                 skys = ref_w.pixel_to_world(xs.tolist(), ys.tolist())
                 w = fit_wcs_from_points([new_xs, new_ys], skys)
 
-                temp_header = fits.pure_header().copy()
+                temp_header = Header()
+                # temp_header.extend(fits.pure_header(), unique=True, update=True)
                 temp_header.extend(w.to_header(), unique=True)
                 fits_array.append(Fits.from_data_header(fits.data(), header=temp_header,
                                                         output=output_fit))
