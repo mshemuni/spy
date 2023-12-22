@@ -70,9 +70,11 @@
   <h1>Source code for spy.fitsarray</h1><div class="highlight"><pre>
 <span></span><span class="kn">from</span> <span class="nn">__future__</span> <span class="kn">import</span> <span class="n">annotations</span>
 
+<span class="kn">import</span> <span class="nn">astroalign</span>
 <span class="kn">from</span> <span class="nn">astropy.wcs</span> <span class="kn">import</span> <span class="n">WCS</span>
+<span class="kn">from</span> <span class="nn">astropy.wcs.utils</span> <span class="kn">import</span> <span class="n">fit_wcs_from_points</span>
 
-<span class="kn">from</span> <span class="nn">.error</span> <span class="kn">import</span> <span class="n">NumberOfElementError</span><span class="p">,</span> <span class="n">OverCorrection</span>
+<span class="kn">from</span> <span class="nn">.error</span> <span class="kn">import</span> <span class="n">NumberOfElementError</span><span class="p">,</span> <span class="n">OverCorrection</span><span class="p">,</span> <span class="n">Unsolvable</span>
 <span class="kn">from</span> <span class="nn">.models</span> <span class="kn">import</span> <span class="n">DataArray</span><span class="p">,</span> <span class="n">NUMERICS</span>
 <span class="kn">from</span> <span class="nn">.fits</span> <span class="kn">import</span> <span class="n">Fits</span>
 <span class="kn">from</span> <span class="nn">.utils</span> <span class="kn">import</span> <span class="n">Fixer</span><span class="p">,</span> <span class="n">Check</span>
@@ -90,13 +92,12 @@
 <span class="kn">from</span> <span class="nn">matplotlib</span> <span class="kn">import</span> <span class="n">pyplot</span> <span class="k">as</span> <span class="n">plt</span><span class="p">,</span> <span class="n">animation</span>
 <span class="kn">from</span> <span class="nn">sep</span> <span class="kn">import</span> <span class="n">Background</span>
 
-<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span>
+<span class="kn">from</span> <span class="nn">typing_extensions</span> <span class="kn">import</span> <span class="n">Self</span><span class="p">,</span> <span class="n">Callable</span>
 
 <span class="kn">from</span> <span class="nn">pathlib</span> <span class="kn">import</span> <span class="n">Path</span>
 <span class="kn">from</span> <span class="nn">typing</span> <span class="kn">import</span> <span class="n">List</span><span class="p">,</span> <span class="n">Union</span><span class="p">,</span> <span class="n">Any</span><span class="p">,</span> <span class="n">Optional</span><span class="p">,</span> <span class="n">Iterator</span><span class="p">,</span> <span class="n">Dict</span>
 
 <span class="kn">from</span> <span class="nn">astropy.io.fits.header</span> <span class="kn">import</span> <span class="n">Header</span>
-<span class="kn">from</span> <span class="nn">astropy.io</span> <span class="kn">import</span> <span class="n">fits</span> <span class="k">as</span> <span class="n">fts</span>
 <span class="kn">from</span> <span class="nn">astropy.coordinates</span> <span class="kn">import</span> <span class="n">SkyCoord</span>
 
 
@@ -268,7 +269,7 @@
     <span class="k">def</span> <span class="nf">sample</span><span class="p">(</span><span class="bp">cls</span><span class="p">,</span> <span class="n">numer_of_samples</span><span class="p">:</span> <span class="nb">int</span> <span class="o">=</span> <span class="mi">10</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Creates a sample `FitsArray` object</span>
-<span class="sd">        see: http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits</span>
+<span class="sd">        see: https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits</span>
 
 <span class="sd">        Parameters</span>
 <span class="sd">        ----------</span>
@@ -286,8 +287,8 @@
                 <span class="n">f</span> <span class="o">=</span> <span class="n">Fits</span><span class="o">.</span><span class="n">sample</span><span class="p">()</span>
                 <span class="n">shifted</span> <span class="o">=</span> <span class="n">f</span><span class="o">.</span><span class="n">shift</span><span class="p">(</span><span class="n">i</span> <span class="o">*</span> <span class="mi">10</span><span class="p">,</span> <span class="n">i</span> <span class="o">*</span> <span class="mi">10</span><span class="p">)</span>
                 <span class="n">fits_objects</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">shifted</span><span class="p">)</span>
-            <span class="k">except</span> <span class="ne">Exception</span><span class="p">:</span>
-                <span class="k">pass</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="n">_</span> <span class="o">=</span> <span class="n">e</span>
         <span class="k">return</span> <span class="bp">cls</span><span class="p">(</span><span class="n">fits_objects</span><span class="p">)</span></div>
 
 
@@ -1029,7 +1030,7 @@
 
 <div class="viewcode-block" id="FitsArray.rotate">
 <a class="viewcode-back" href="../../docs/spy.html#spy.fitsarray.FitsArray.rotate">[docs]</a>
-    <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angle</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span> <span class="n">reshape</span><span class="p">:</span> <span class="nb">bool</span> <span class="o">=</span> <span class="kc">False</span><span class="p">,</span>
+    <span class="k">def</span> <span class="nf">rotate</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">angle</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">]],</span> <span class="nb">float</span><span class="p">,</span> <span class="nb">int</span><span class="p">],</span>
                <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
 <span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
 <span class="sd">        Rotates the data of `FitsArray` object</span>
@@ -1038,8 +1039,6 @@
 <span class="sd">        ----------</span>
 <span class="sd">        angle: Union[List[Union[float, int]], float, int]</span>
 <span class="sd">            Rotation angle(s) (radians)</span>
-<span class="sd">        reshape: bool, default=False</span>
-<span class="sd">            Reshape after rotate</span>
 <span class="sd">        output: str, optional</span>
 <span class="sd">            New path to save the files.</span>
 
@@ -1068,7 +1067,7 @@
         <span class="k">for</span> <span class="n">fits</span><span class="p">,</span> <span class="n">output_fit</span><span class="p">,</span> <span class="n">ang</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">to_rotate</span><span class="p">):</span>
 
             <span class="k">try</span><span class="p">:</span>
-                <span class="n">rotated</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">ang</span><span class="p">,</span> <span class="n">reshape</span><span class="o">=</span><span class="n">reshape</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output_fit</span><span class="p">)</span>
+                <span class="n">rotated</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">rotate</span><span class="p">(</span><span class="n">ang</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output_fit</span><span class="p">)</span>
                 <span class="n">fits_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">rotated</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
@@ -1149,6 +1148,59 @@
                 <span class="n">cropped</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">crop</span><span class="p">(</span><span class="n">x</span><span class="p">,</span> <span class="n">y</span><span class="p">,</span> <span class="n">w</span><span class="p">,</span> <span class="n">h</span><span class="p">,</span> <span class="n">output_fit</span><span class="p">)</span>
                 <span class="n">fits_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">cropped</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">IndexError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
+
+        <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">fits_array</span><span class="p">)</span></div>
+
+
+<div class="viewcode-block" id="FitsArray.bin">
+<a class="viewcode-back" href="../../docs/spy.html#spy.fitsarray.FitsArray.bin">[docs]</a>
+    <span class="k">def</span> <span class="nf">bin</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">binning_factor</span><span class="p">:</span> <span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="n">Union</span><span class="p">[</span><span class="nb">int</span><span class="p">,</span> <span class="n">List</span><span class="p">[</span><span class="nb">int</span><span class="p">]]]],</span> <span class="n">func</span><span class="p">:</span> <span class="n">Callable</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">mean</span><span class="p">,</span>
+            <span class="n">output</span><span class="p">:</span> <span class="n">Optional</span><span class="p">[</span><span class="nb">str</span><span class="p">]</span> <span class="o">=</span> <span class="kc">None</span><span class="p">)</span> <span class="o">-&gt;</span> <span class="n">Self</span><span class="p">:</span>
+<span class="w">        </span><span class="sd">&quot;&quot;&quot;</span>
+<span class="sd">        Bins the data of `FitsArray` object</span>
+
+<span class="sd">        Parameters</span>
+<span class="sd">        ----------</span>
+<span class="sd">        binning_factor: Union[int, List[Union[int, List[int]]]]</span>
+<span class="sd">            Binning factor</span>
+<span class="sd">        func: Callable, default np.mean</span>
+<span class="sd">            the function to be used on merge</span>
+<span class="sd">        output: str, optional</span>
+<span class="sd">            New path to save the files.</span>
+
+<span class="sd">        Returns</span>
+<span class="sd">        -------</span>
+<span class="sd">        Self</span>
+<span class="sd">            binned `FitsArray` object</span>
+
+<span class="sd">        Raises</span>
+<span class="sd">        ------</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            when the `binning_factor` is wrong</span>
+<span class="sd">        ValueError</span>
+<span class="sd">            when the `binning_factor` is huge</span>
+<span class="sd">        &quot;&quot;&quot;</span>
+
+        <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Cropping all images&quot;</span><span class="p">)</span>
+
+        <span class="k">if</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">binning_factor</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">and</span> <span class="nb">len</span><span class="p">(</span><span class="n">binning_factor</span><span class="p">)</span> <span class="o">==</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+            <span class="n">binning_factors_to_use</span> <span class="o">=</span> <span class="n">binning_factor</span>
+        <span class="k">elif</span> <span class="ow">not</span> <span class="nb">isinstance</span><span class="p">(</span><span class="n">binning_factor</span><span class="p">,</span> <span class="nb">list</span><span class="p">)</span> <span class="ow">or</span> <span class="nb">len</span><span class="p">(</span><span class="n">binning_factor</span><span class="p">)</span> <span class="o">==</span> <span class="mi">2</span><span class="p">:</span>
+            <span class="n">binning_factors_to_use</span> <span class="o">=</span> <span class="p">[</span><span class="n">binning_factor</span><span class="p">]</span> <span class="o">*</span> <span class="nb">len</span><span class="p">(</span><span class="bp">self</span><span class="p">)</span>
+        <span class="k">else</span><span class="p">:</span>
+            <span class="k">raise</span> <span class="ne">ValueError</span><span class="p">(</span><span class="s2">&quot;Bad binning factor&quot;</span><span class="p">)</span>
+
+        <span class="n">fits_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">Fixer</span><span class="o">.</span><span class="n">outputs</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
+
+        <span class="k">for</span> <span class="n">fits</span><span class="p">,</span> <span class="n">output_fit</span><span class="p">,</span> <span class="n">binning_factor_to_use</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputs</span><span class="p">,</span> <span class="n">binning_factors_to_use</span><span class="p">):</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">binned</span> <span class="o">=</span> <span class="n">fits</span><span class="o">.</span><span class="n">bin</span><span class="p">(</span><span class="n">binning_factor_to_use</span><span class="p">,</span> <span class="n">func</span><span class="o">=</span><span class="n">func</span><span class="p">,</span> <span class="n">output</span><span class="o">=</span><span class="n">output_fit</span><span class="p">)</span>
+                <span class="n">fits_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">binned</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">ValueError</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
             <span class="k">except</span> <span class="ne">Exception</span> <span class="k">as</span> <span class="n">error</span><span class="p">:</span>
                 <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">error</span><span class="p">(</span><span class="n">error</span><span class="p">)</span>
@@ -1239,7 +1291,7 @@
 <span class="sd">            If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.</span>
 <span class="sd">            This option will almost always take longer than finding sources locally.</span>
 <span class="sd">            It will even take longer than installing photutils and then rerunning this.</span>
-<span class="sd">            Even if this is False the image will be upload unless photutils is installed.</span>
+<span class="sd">            Even if this is False the image will be uploaded unless photutils is installed.</span>
 <span class="sd">            see: [1]</span>
 <span class="sd">        max_control_points: int, default=50</span>
 <span class="sd">            The maximum number of control point-sources to</span>
@@ -1278,22 +1330,37 @@
             <span class="n">api_key</span><span class="p">,</span> <span class="n">solve_timeout</span><span class="o">=</span><span class="n">solve_timeout</span><span class="p">,</span> <span class="n">force_image_upload</span><span class="o">=</span><span class="n">force_image_upload</span>
         <span class="p">)</span>
 
-        <span class="n">w</span> <span class="o">=</span> <span class="n">WCS</span><span class="p">(</span><span class="n">solved_fits</span><span class="o">.</span><span class="n">pure_header</span><span class="p">())</span>
-        <span class="n">wcs_headers</span> <span class="o">=</span> <span class="n">w</span><span class="o">.</span><span class="n">to_header</span><span class="p">()</span>
-        <span class="n">aligned</span> <span class="o">=</span> <span class="bp">self</span><span class="o">.</span><span class="n">align</span><span class="p">(</span>
-            <span class="n">reference</span><span class="o">=</span><span class="n">the_reference</span><span class="p">,</span>
-            <span class="n">max_control_points</span><span class="o">=</span><span class="n">max_control_points</span><span class="p">,</span> <span class="n">min_area</span><span class="o">=</span><span class="n">min_area</span><span class="p">,</span>
-            <span class="n">output</span><span class="o">=</span><span class="n">output</span>
-        <span class="p">)</span>
+        <span class="n">ref_w</span> <span class="o">=</span> <span class="n">WCS</span><span class="p">(</span><span class="n">solved_fits</span><span class="o">.</span><span class="n">pure_header</span><span class="p">())</span>
 
         <span class="n">fits_array</span> <span class="o">=</span> <span class="p">[]</span>
+        <span class="n">outputs</span> <span class="o">=</span> <span class="n">Fixer</span><span class="o">.</span><span class="n">outputs</span><span class="p">(</span><span class="n">output</span><span class="p">,</span> <span class="bp">self</span><span class="p">)</span>
 
-        <span class="k">for</span> <span class="n">fits</span> <span class="ow">in</span> <span class="n">aligned</span><span class="p">:</span>
-            <span class="k">with</span> <span class="n">fts</span><span class="o">.</span><span class="n">open</span><span class="p">(</span><span class="nb">abs</span><span class="p">(</span><span class="n">fits</span><span class="p">),</span> <span class="s2">&quot;update&quot;</span><span class="p">)</span> <span class="k">as</span> <span class="n">hdu</span><span class="p">:</span>
-                <span class="k">for</span> <span class="n">key</span> <span class="ow">in</span> <span class="n">wcs_headers</span><span class="p">:</span>
-                    <span class="n">hdu</span><span class="p">[</span><span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">header</span><span class="p">[</span><span class="n">key</span><span class="p">]</span> <span class="o">=</span> <span class="n">wcs_headers</span><span class="p">[</span><span class="n">key</span><span class="p">]</span>
+        <span class="k">for</span> <span class="n">fits</span><span class="p">,</span> <span class="n">output_fit</span> <span class="ow">in</span> <span class="nb">zip</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">outputs</span><span class="p">):</span>
+            <span class="n">t</span><span class="p">,</span> <span class="p">(</span><span class="n">source_list</span><span class="p">,</span> <span class="n">target_list</span><span class="p">)</span> <span class="o">=</span> <span class="n">astroalign</span><span class="o">.</span><span class="n">find_transform</span><span class="p">(</span>
+                <span class="n">source</span><span class="o">=</span><span class="n">fits</span><span class="o">.</span><span class="n">data</span><span class="p">(),</span>
+                <span class="n">target</span><span class="o">=</span><span class="n">the_reference</span><span class="o">.</span><span class="n">data</span><span class="p">(),</span>
+                <span class="n">max_control_points</span><span class="o">=</span><span class="n">max_control_points</span><span class="p">,</span>
+                <span class="n">min_area</span><span class="o">=</span><span class="n">min_area</span><span class="p">,</span>
+            <span class="p">)</span>
+            <span class="k">try</span><span class="p">:</span>
+                <span class="n">xs</span> <span class="o">=</span> <span class="n">target_list</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">ys</span> <span class="o">=</span> <span class="n">target_list</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
 
-            <span class="n">fits_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">fits</span><span class="p">)</span>
+                <span class="n">new_xs</span> <span class="o">=</span> <span class="n">source_list</span><span class="p">[:,</span> <span class="mi">0</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+                <span class="n">new_ys</span> <span class="o">=</span> <span class="n">source_list</span><span class="p">[:,</span> <span class="mi">1</span><span class="p">]</span><span class="o">.</span><span class="n">flatten</span><span class="p">()</span>
+
+                <span class="n">skys</span> <span class="o">=</span> <span class="n">ref_w</span><span class="o">.</span><span class="n">pixel_to_world</span><span class="p">(</span><span class="n">xs</span><span class="o">.</span><span class="n">tolist</span><span class="p">(),</span> <span class="n">ys</span><span class="o">.</span><span class="n">tolist</span><span class="p">())</span>
+                <span class="n">w</span> <span class="o">=</span> <span class="n">fit_wcs_from_points</span><span class="p">([</span><span class="n">new_xs</span><span class="p">,</span> <span class="n">new_ys</span><span class="p">],</span> <span class="n">skys</span><span class="p">)</span>
+
+                <span class="n">temp_header</span> <span class="o">=</span> <span class="n">Header</span><span class="p">()</span>
+                <span class="c1"># temp_header.extend(fits.pure_header(), unique=True, update=True)</span>
+                <span class="n">temp_header</span><span class="o">.</span><span class="n">extend</span><span class="p">(</span><span class="n">w</span><span class="o">.</span><span class="n">to_header</span><span class="p">(),</span> <span class="n">unique</span><span class="o">=</span><span class="kc">True</span><span class="p">)</span>
+                <span class="n">fits_array</span><span class="o">.</span><span class="n">append</span><span class="p">(</span><span class="n">Fits</span><span class="o">.</span><span class="n">from_data_header</span><span class="p">(</span><span class="n">fits</span><span class="o">.</span><span class="n">data</span><span class="p">(),</span> <span class="n">header</span><span class="o">=</span><span class="n">temp_header</span><span class="p">,</span>
+                                                        <span class="n">output</span><span class="o">=</span><span class="n">output_fit</span><span class="p">))</span>
+            <span class="k">except</span> <span class="n">Unsolvable</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;No WCS found in header&quot;</span><span class="p">)</span>
+            <span class="k">except</span> <span class="ne">AttributeError</span> <span class="k">as</span> <span class="n">e</span><span class="p">:</span>
+                <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="n">e</span><span class="p">)</span>
 
         <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="vm">__class__</span><span class="p">(</span><span class="n">fits_array</span><span class="p">)</span></div>
 
@@ -2062,7 +2129,6 @@
 
 <span class="sd">        &quot;&quot;&quot;</span>
         <span class="bp">self</span><span class="o">.</span><span class="n">logger</span><span class="o">.</span><span class="n">info</span><span class="p">(</span><span class="s2">&quot;Calculating pixels to skys&quot;</span><span class="p">)</span>
-
         <span class="k">return</span> <span class="n">pd</span><span class="o">.</span><span class="n">concat</span><span class="p">(</span>
             <span class="p">[</span>
                 <span class="n">each</span><span class="o">.</span><span class="n">pixels_to_skys</span><span class="p">(</span><span class="n">xs</span><span class="p">,</span> <span class="n">ys</span><span class="p">)</span>

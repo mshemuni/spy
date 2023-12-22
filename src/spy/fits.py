@@ -16,12 +16,12 @@ from typing import Optional, Union, List, Any, Tuple
 
 from photutils.aperture import CircularAperture, aperture_photometry
 from photutils.utils import calc_total_error
-from typing_extensions import Self
+from typing_extensions import Self, Callable
 
 import astroalign
 
 from astropy import units
-from astropy.nddata import CCDData
+from astropy.nddata import CCDData, block_reduce
 from astropy.stats import sigma_clipped_stats
 from astropy.visualization import ZScaleInterval
 from photutils.detection import DAOStarFinder
@@ -1703,6 +1703,70 @@ class Fits(Data):
         # temp_header.extend(self.pure_header(), unique=True, update=True)
         temp_header.extend(w.to_header(), unique=True, update=True)
         return self.__class__.from_data_header(data, header=temp_header, output=output, override=override)
+
+    def bin(self, binning_factor: Union[int, List[int]], func: Callable = np.mean,
+            output: Optional[str] = None, override: bool = False) -> Self:
+        """
+        Bin the data of `Fits` object
+
+        Parameters
+        ----------
+        binning_factor: Union[int, List[int]]
+            binning factor
+        func: Callable, default np.mean
+            the function to be used on merge
+        output: str, optional
+            Path of the new fits file.
+        override: bool, default=False
+            If True will overwrite the output if a file is already exists.
+
+        Returns
+        -------
+        Self
+            binned `Fits` object
+
+        Raises
+        ------
+        ValueError
+            when the `binning_factor` is wrong
+        ValueError
+            when the `binning_factor` is big
+        """
+        self.logger.info("Binning the image")
+        if isinstance(binning_factor, int):
+            binning_factor_to_use = [binning_factor] * 2
+        else:
+            if len(binning_factor) != 2:
+                raise ValueError("Binning Factor must be a list of 2 integers")
+            binning_factor_to_use = binning_factor
+        try:
+            binned_data = block_reduce(self.data(), tuple(binning_factor_to_use), func=func)
+            w = WCS(self.pure_header())
+        except ValueError:
+            raise ValueError("Big value")
+
+        try:
+            highest = min(self.data().shape)
+            xs = np.random.randint(0, highest, 20)
+            ys = np.random.randint(0, highest, 20)
+
+            skys = w.pixel_to_world(xs.tolist(), ys.tolist())
+
+            new_coords = [
+                xs // binning_factor_to_use[0],
+                ys // binning_factor_to_use[1]
+            ]
+
+            w = fit_wcs_from_points([new_coords[0], new_coords[1]], skys)
+        except Unsolvable:
+            self.logger.info("No WCS found in header")
+        except AttributeError as e:
+            self.logger.info(e)
+
+        temp_header = Header()
+        # temp_header.extend(self.pure_header(), unique=True, update=True)
+        temp_header.extend(w.to_header(), unique=True, update=True)
+        return self.__class__.from_data_header(binned_data, header=temp_header, output=output, override=override)
 
     def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
                        ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:

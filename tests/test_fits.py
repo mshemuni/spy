@@ -936,6 +936,24 @@ class TestFits(unittest.TestCase):
         with self.assertRaises(Unsolvable):
             _ = sample.skys_to_pixels(sc)
 
+    def test_bin(self):
+        binned = self.SAMPLE.bin(4)
+        self.assertEqual(
+            self.SAMPLE.data().shape[0] // 4, binned.data().shape[0]
+        )
+        self.assertEqual(
+            self.SAMPLE.data().shape[1] // 4, binned.data().shape[1]
+        )
+
+    def test_bin_asymmetric(self):
+        binned = self.SAMPLE.bin([4, 10])
+        self.assertEqual(
+            self.SAMPLE.data().shape[0] // 4, binned.data().shape[0]
+        )
+        self.assertEqual(
+            self.SAMPLE.data().shape[1] // 10, binned.data().shape[1]
+        )
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -3,7 +3,9 @@ from __future__ import annotations
 from abc import ABC, abstractmethod
 
 from typing import Optional, List, Union, Any, TYPE_CHECKING, Dict
-from typing_extensions import Self
+
+import numpy as np
+from typing_extensions import Self, Callable
 
 if TYPE_CHECKING:
     from .fits import Fits
@@ -205,6 +207,11 @@ class Data(ABC):
         ...
 
     @abstractmethod
+    def bin(self, binning_factor: Union[int, List[int]], func: Callable = np.mean,
+            output: Optional[str] = None, override: bool = False) -> Self:
+        ...
+
+    @abstractmethod
     def pixels_to_skys(self, xs: Union[List[Union[int, float]], int, float],
                        ys: Union[List[Union[int, float]], int, float]) -> pd.DataFrame:
         ...
@@ -334,6 +341,11 @@ class DataArray(ABC):
     def crop(self, xs: Union[List[int], int], ys: Union[List[int], int],
              widths: Union[List[int], int], heights: Union[List[int], int],
              output: Optional[str] = None) -> Self:
+        ...
+
+    @abstractmethod
+    def bin(self, binning_factor: Union[int, List[Union[int, List[int]]]], func: Callable = np.mean,
+            output: Optional[str] = None) -> Self:
         ...
 
     @abstractmethod

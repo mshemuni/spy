@@ -52,6 +52,7 @@
 <li><a class="reference internal" href="#spy.fits.Fits.add"><code class="docutils literal notranslate"><span class="pre">Fits.add()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fits.Fits.align"><code class="docutils literal notranslate"><span class="pre">Fits.align()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fits.Fits.background"><code class="docutils literal notranslate"><span class="pre">Fits.background()</span></code></a></li>
+<li><a class="reference internal" href="#spy.fits.Fits.bin"><code class="docutils literal notranslate"><span class="pre">Fits.bin()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fits.Fits.ccd"><code class="docutils literal notranslate"><span class="pre">Fits.ccd()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fits.Fits.coordinate_picker"><code class="docutils literal notranslate"><span class="pre">Fits.coordinate_picker()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fits.Fits.cosmic_clean"><code class="docutils literal notranslate"><span class="pre">Fits.cosmic_clean()</span></code></a></li>
@@ -97,6 +98,7 @@
 <li><a class="reference internal" href="#spy.fitsarray.FitsArray.align"><code class="docutils literal notranslate"><span class="pre">FitsArray.align()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fitsarray.FitsArray.append"><code class="docutils literal notranslate"><span class="pre">FitsArray.append()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fitsarray.FitsArray.background"><code class="docutils literal notranslate"><span class="pre">FitsArray.background()</span></code></a></li>
+<li><a class="reference internal" href="#spy.fitsarray.FitsArray.bin"><code class="docutils literal notranslate"><span class="pre">FitsArray.bin()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fitsarray.FitsArray.ccd"><code class="docutils literal notranslate"><span class="pre">FitsArray.ccd()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fitsarray.FitsArray.combine"><code class="docutils literal notranslate"><span class="pre">FitsArray.combine()</span></code></a></li>
 <li><a class="reference internal" href="#spy.fitsarray.FitsArray.cosmic_clean"><code class="docutils literal notranslate"><span class="pre">FitsArray.cosmic_clean()</span></code></a></li>
@@ -241,6 +243,34 @@ find the transformation. [1]</p></li>
 </dd></dl>
 
 <dl class="py method">
+<dt class="sig sig-object py" id="spy.fits.Fits.bin">
+<span class="sig-name descname"><span class="pre">bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">binning_factor:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">~typing.List[int],</span> <span class="pre">func:</span> <span class="pre">~typing.Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">mean&gt;,</span> <span class="pre">output:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None,</span> <span class="pre">override:</span> <span class="pre">bool</span> <span class="pre">=</span> <span class="pre">False</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fits.html#Fits.bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fits.Fits.bin" title="Link to this definition"></a></dt>
+<dd><p>Bin the data of <cite>Fits</cite> object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>binning_factor</strong> (<em>Union</em><em>[</em><em>int</em><em>, </em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em>) – binning factor</p></li>
+<li><p><strong>func</strong> (<em>Callable</em><em>, </em><em>default np.mean</em>) – the function to be used on merge</p></li>
+<li><p><strong>output</strong> (<em>str</em><em>, </em><em>optional</em>) – Path of the new fits file.</p></li>
+<li><p><strong>override</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If True will overwrite the output if a file is already exists.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>binned <cite>Fits</cite> object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Self</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – when the <cite>binning_factor</cite> is wrong</p></li>
+<li><p><strong>ValueError</strong> – when the <cite>binning_factor</cite> is big</p></li>
+</ul>
+</dd>
+</dl>
+</dd></dl>
+
+<dl class="py method">
 <dt class="sig sig-object py" id="spy.fits.Fits.ccd">
 <span class="sig-name descname"><span class="pre">ccd</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">CCDData</span></span></span><a class="reference internal" href="../_modules/spy/fits.html#Fits.ccd"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fits.Fits.ccd" title="Link to this definition"></a></dt>
 <dd><p>Returns the CCDData of the given file</p>
@@ -376,7 +406,7 @@ Default is True to preserve backwards compatibility. see [1]</p></li>
 </ul>
 </dd>
 <dt class="field-even">Returns<span class="colon">:</span></dt>
-<dd class="field-even"><p>rotated <cite>Fits</cite> object</p>
+<dd class="field-even"><p>cropped <cite>Fits</cite> object</p>
 </dd>
 <dt class="field-odd">Return type<span class="colon">:</span></dt>
 <dd class="field-odd"><p>Self</p>
@@ -896,13 +926,12 @@ delete is True.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spy.fits.Fits.rotate">
-<span class="sig-name descname"><span class="pre">rotate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reshape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fits.html#Fits.rotate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fits.Fits.rotate" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rotate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">override</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fits.html#Fits.rotate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fits.Fits.rotate" title="Link to this definition"></a></dt>
 <dd><p>Rotates the data of <cite>Fits</cite> object</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>angle</strong> (<em>float</em><em>, </em><em>int</em>) – rotation angle (radians)</p></li>
-<li><p><strong>reshape</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Reshape after rotate</p></li>
 <li><p><strong>output</strong> (<em>str</em><em>, </em><em>optional</em>) – Path of the new fits file.</p></li>
 <li><p><strong>override</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If True will overwrite the output if a file is already exists.</p></li>
 </ul>
@@ -920,7 +949,7 @@ delete is True.</p></li>
 <dt class="sig sig-object py" id="spy.fits.Fits.sample">
 <em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fits.html#Fits.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fits.Fits.sample" title="Link to this definition"></a></dt>
 <dd><p>Creates a sample <cite>Fits</cite> object
-see: <a class="reference external" href="http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits">http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits</a></p>
+see: <a class="reference external" href="https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits">https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits</a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Returns<span class="colon">:</span></dt>
 <dd class="field-odd"><p>a <cite>Fits</cite> object.</p>
@@ -1026,7 +1055,7 @@ see: <a class="reference external" href="http://www.astropy.org/astropy-data/tut
 <li><p><strong>force_image_upload</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.
 This option will almost always take longer than finding sources locally.
 It will even take longer than installing photutils and then rerunning this.
-Even if this is False the image will be upload unless photutils is installed.
+Even if this is False the image will be uploaded unless photutils is installed.
 see: [1]</p></li>
 <li><p><strong>output</strong> (<em>str</em>) – New path to save the file.</p></li>
 <li><p><strong>override</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If True will overwrite the new_path if a file is already exists.</p></li>
@@ -1215,6 +1244,33 @@ find the transformation. [1]</p></li>
 <dt class="sig sig-object py" id="spy.fitsarray.FitsArray.background">
 <span class="sig-name descname"><span class="pre">background</span></span><span class="sig-paren">(</span><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">Background</span><span class="p"><span class="pre">]</span></span></span></span><a class="reference internal" href="../_modules/spy/fitsarray.html#FitsArray.background"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fitsarray.FitsArray.background" title="Link to this definition"></a></dt>
 <dd><p>Returns a list of <cite>Background</cite> objects of the fits files.</p>
+</dd></dl>
+
+<dl class="py method">
+<dt class="sig sig-object py" id="spy.fitsarray.FitsArray.bin">
+<span class="sig-name descname"><span class="pre">bin</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="pre">binning_factor:</span> <span class="pre">int</span> <span class="pre">|</span> <span class="pre">~typing.List[int</span> <span class="pre">|</span> <span class="pre">~typing.List[int]],</span> <span class="pre">func:</span> <span class="pre">~typing.Callable</span> <span class="pre">=</span> <span class="pre">&lt;function</span> <span class="pre">mean&gt;,</span> <span class="pre">output:</span> <span class="pre">str</span> <span class="pre">|</span> <span class="pre">None</span> <span class="pre">=</span> <span class="pre">None</span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fitsarray.html#FitsArray.bin"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fitsarray.FitsArray.bin" title="Link to this definition"></a></dt>
+<dd><p>Bins the data of <cite>FitsArray</cite> object</p>
+<dl class="field-list simple">
+<dt class="field-odd">Parameters<span class="colon">:</span></dt>
+<dd class="field-odd"><ul class="simple">
+<li><p><strong>binning_factor</strong> (<em>Union</em><em>[</em><em>int</em><em>, </em><em>List</em><em>[</em><em>Union</em><em>[</em><em>int</em><em>, </em><em>List</em><em>[</em><em>int</em><em>]</em><em>]</em><em>]</em><em>]</em>) – Binning factor</p></li>
+<li><p><strong>func</strong> (<em>Callable</em><em>, </em><em>default np.mean</em>) – the function to be used on merge</p></li>
+<li><p><strong>output</strong> (<em>str</em><em>, </em><em>optional</em>) – New path to save the files.</p></li>
+</ul>
+</dd>
+<dt class="field-even">Returns<span class="colon">:</span></dt>
+<dd class="field-even"><p>binned <cite>FitsArray</cite> object</p>
+</dd>
+<dt class="field-odd">Return type<span class="colon">:</span></dt>
+<dd class="field-odd"><p>Self</p>
+</dd>
+<dt class="field-even">Raises<span class="colon">:</span></dt>
+<dd class="field-even"><ul class="simple">
+<li><p><strong>ValueError</strong> – when the <cite>binning_factor</cite> is wrong</p></li>
+<li><p><strong>ValueError</strong> – when the <cite>binning_factor</cite> is huge</p></li>
+</ul>
+</dd>
+</dl>
 </dd></dl>
 
 <dl class="py method">
@@ -1959,13 +2015,12 @@ delete is True.</p></li>
 
 <dl class="py method">
 <dt class="sig sig-object py" id="spy.fitsarray.FitsArray.rotate">
-<span class="sig-name descname"><span class="pre">rotate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">reshape</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">bool</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">False</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fitsarray.html#FitsArray.rotate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fitsarray.FitsArray.rotate" title="Link to this definition"></a></dt>
+<span class="sig-name descname"><span class="pre">rotate</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">angle</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">List</span><span class="p"><span class="pre">[</span></span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span><span class="p"><span class="pre">]</span></span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">float</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">int</span></span></em>, <em class="sig-param"><span class="n"><span class="pre">output</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">str</span><span class="w"> </span><span class="p"><span class="pre">|</span></span><span class="w"> </span><span class="pre">None</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">None</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fitsarray.html#FitsArray.rotate"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fitsarray.FitsArray.rotate" title="Link to this definition"></a></dt>
 <dd><p>Rotates the data of <cite>FitsArray</cite> object</p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><ul class="simple">
 <li><p><strong>angle</strong> (<em>Union</em><em>[</em><em>List</em><em>[</em><em>Union</em><em>[</em><em>float</em><em>, </em><em>int</em><em>]</em><em>]</em><em>, </em><em>float</em><em>, </em><em>int</em><em>]</em>) – Rotation angle(s) (radians)</p></li>
-<li><p><strong>reshape</strong> (<em>bool</em><em>, </em><em>default=False</em>) – Reshape after rotate</p></li>
 <li><p><strong>output</strong> (<em>str</em><em>, </em><em>optional</em>) – New path to save the files.</p></li>
 </ul>
 </dd>
@@ -1982,7 +2037,7 @@ delete is True.</p></li>
 <dt class="sig sig-object py" id="spy.fitsarray.FitsArray.sample">
 <em class="property"><span class="pre">classmethod</span><span class="w"> </span></em><span class="sig-name descname"><span class="pre">sample</span></span><span class="sig-paren">(</span><em class="sig-param"><span class="n"><span class="pre">numer_of_samples</span></span><span class="p"><span class="pre">:</span></span><span class="w"> </span><span class="n"><span class="pre">int</span></span><span class="w"> </span><span class="o"><span class="pre">=</span></span><span class="w"> </span><span class="default_value"><span class="pre">10</span></span></em><span class="sig-paren">)</span> <span class="sig-return"><span class="sig-return-icon">&#x2192;</span> <span class="sig-return-typehint"><span class="pre">Self</span></span></span><a class="reference internal" href="../_modules/spy/fitsarray.html#FitsArray.sample"><span class="viewcode-link"><span class="pre">[source]</span></span></a><a class="headerlink" href="#spy.fitsarray.FitsArray.sample" title="Link to this definition"></a></dt>
 <dd><p>Creates a sample <cite>FitsArray</cite> object
-see: <a class="reference external" href="http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits">http://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits</a></p>
+see: <a class="reference external" href="https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits">https://www.astropy.org/astropy-data/tutorials/FITS-images/HorseHead.fits</a></p>
 <dl class="field-list simple">
 <dt class="field-odd">Parameters<span class="colon">:</span></dt>
 <dd class="field-odd"><p><strong>numer_of_samples</strong> (<em>int</em><em>, </em><em>default=10</em>) – number of <cite>Fits</cite> in <cite>FitsArray</cite></p>
@@ -2093,7 +2148,7 @@ see: <a class="reference external" href="http://www.astropy.org/astropy-data/tut
 <li><p><strong>force_image_upload</strong> (<em>bool</em><em>, </em><em>default=False</em>) – If True, upload the image to astrometry.net even if it is possible to detect sources in the image locally.
 This option will almost always take longer than finding sources locally.
 It will even take longer than installing photutils and then rerunning this.
-Even if this is False the image will be upload unless photutils is installed.
+Even if this is False the image will be uploaded unless photutils is installed.
 see: [1]</p></li>
 <li><p><strong>max_control_points</strong> (<em>int</em><em>, </em><em>default=50</em>) – The maximum number of control point-sources to
 find the transformation. [2]</p></li>

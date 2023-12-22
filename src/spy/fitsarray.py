@@ -22,7 +22,7 @@ from astropy.visualization import ZScaleInterval
 from matplotlib import pyplot as plt, animation
 from sep import Background
 
-from typing_extensions import Self
+from typing_extensions import Self, Callable
 
 from pathlib import Path
 from typing import List, Union, Any, Optional, Iterator, Dict
@@ -1008,6 +1008,56 @@ class FitsArray(DataArray):
                 cropped = fits.crop(x, y, w, h, output_fit)
                 fits_array.append(cropped)
             except IndexError as error:
+                self.logger.info(error)
+            except Exception as error:
+                self.logger.error(error)
+
+        return self.__class__(fits_array)
+
+    def bin(self, binning_factor: Union[int, List[Union[int, List[int]]]], func: Callable = np.mean,
+            output: Optional[str] = None) -> Self:
+        """
+        Bins the data of `FitsArray` object
+
+        Parameters
+        ----------
+        binning_factor: Union[int, List[Union[int, List[int]]]]
+            Binning factor
+        func: Callable, default np.mean
+            the function to be used on merge
+        output: str, optional
+            New path to save the files.
+
+        Returns
+        -------
+        Self
+            binned `FitsArray` object
+
+        Raises
+        ------
+        ValueError
+            when the `binning_factor` is wrong
+        ValueError
+            when the `binning_factor` is huge
+        """
+
+        self.logger.info("Cropping all images")
+
+        if isinstance(binning_factor, list) and len(binning_factor) == len(self):
+            binning_factors_to_use = binning_factor
+        elif not isinstance(binning_factor, list) or len(binning_factor) == 2:
+            binning_factors_to_use = [binning_factor] * len(self)
+        else:
+            raise ValueError("Bad binning factor")
+
+        fits_array = []
+        outputs = Fixer.outputs(output, self)
+
+        for fits, output_fit, binning_factor_to_use in zip(self, outputs, binning_factors_to_use):
+            try:
+                binned = fits.bin(binning_factor_to_use, func=func, output=output_fit)
+                fits_array.append(binned)
+            except ValueError as error:
                 self.logger.info(error)
             except Exception as error:
                 self.logger.error(error)
