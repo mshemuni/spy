@@ -12,11 +12,11 @@ from logging import getLogger, Logger
 
 import math
 import shutil
-from typing import Optional, Union, List, Any, Tuple
+from typing import Optional, Union, List, Any, Tuple, Callable
 
 from photutils.aperture import CircularAperture, aperture_photometry
 from photutils.utils import calc_total_error
-from typing_extensions import Self, Callable
+from typing_extensions import Self
 
 import astroalign
 
@@ -1704,7 +1704,7 @@ class Fits(Data):
         temp_header.extend(w.to_header(), unique=True, update=True)
         return self.__class__.from_data_header(data, header=temp_header, output=output, override=override)
 
-    def bin(self, binning_factor: Union[int, List[int]], func: Callable = np.mean,
+    def bin(self, binning_factor: Union[int, List[int]], func: Callable[[Any], float] = np.mean,
             output: Optional[str] = None, override: bool = False) -> Self:
         """
         Bin the data of `Fits` object
@@ -1713,7 +1713,7 @@ class Fits(Data):
         ----------
         binning_factor: Union[int, List[int]]
             binning factor
-        func: Callable, default np.mean
+        func: Callable[[Any], float], default np.mean
             the function to be used on merge
         output: str, optional
             Path of the new fits file.

@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from abc import ABC, abstractmethod
 
-from typing import Optional, List, Union, Any, TYPE_CHECKING, Dict
+from typing import Optional, List, Union, Any, TYPE_CHECKING, Dict, Callable
 
 import numpy as np
-from typing_extensions import Self, Callable
+from typing_extensions import Self
 
 if TYPE_CHECKING:
     from .fits import Fits
@@ -207,7 +207,7 @@ class Data(ABC):
         ...
 
     @abstractmethod
-    def bin(self, binning_factor: Union[int, List[int]], func: Callable = np.mean,
+    def bin(self, binning_factor: Union[int, List[int]], func: Callable[[Any], float] = np.mean,
             output: Optional[str] = None, override: bool = False) -> Self:
         ...
 
@@ -344,7 +344,7 @@ class DataArray(ABC):
         ...
 
     @abstractmethod
-    def bin(self, binning_factor: Union[int, List[Union[int, List[int]]]], func: Callable = np.mean,
+    def bin(self, binning_factor: Union[int, List[int]], func: Callable[[Any], float] = np.mean,
             output: Optional[str] = None) -> Self:
         ...
 

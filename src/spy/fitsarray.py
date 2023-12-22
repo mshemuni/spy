@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-import astroalign
-from astropy.wcs import WCS
-from astropy.wcs.utils import fit_wcs_from_points
-
 from .error import NumberOfElementError, OverCorrection, Unsolvable
 from .models import DataArray, NUMERICS
 from .fits import Fits
 from .utils import Fixer, Check
+
+import astroalign
+from astropy.wcs import WCS
+from astropy.wcs.utils import fit_wcs_from_points
 
 from logging import getLogger, Logger
 
@@ -22,10 +22,10 @@ from astropy.visualization import ZScaleInterval
 from matplotlib import pyplot as plt, animation
 from sep import Background
 
-from typing_extensions import Self, Callable
+from typing_extensions import Self
 
 from pathlib import Path
-from typing import List, Union, Any, Optional, Iterator, Dict
+from typing import List, Union, Any, Optional, Iterator, Dict, Callable
 
 from astropy.io.fits.header import Header
 from astropy.coordinates import SkyCoord
@@ -1014,7 +1014,7 @@ class FitsArray(DataArray):
 
         return self.__class__(fits_array)
 
-    def bin(self, binning_factor: Union[int, List[Union[int, List[int]]]], func: Callable = np.mean,
+    def bin(self, binning_factor: Union[int, List[int]], func: Callable[[Any], float] = np.mean,
             output: Optional[str] = None) -> Self:
         """
         Bins the data of `FitsArray` object
@@ -1023,7 +1023,7 @@ class FitsArray(DataArray):
         ----------
         binning_factor: Union[int, List[Union[int, List[int]]]]
             Binning factor
-        func: Callable, default np.mean
+        func: Callable[[Any], float], default np.mean
             the function to be used on merge
         output: str, optional
             New path to save the files.
@@ -1043,19 +1043,12 @@ class FitsArray(DataArray):
 
         self.logger.info("Cropping all images")
 
-        if isinstance(binning_factor, list) and len(binning_factor) == len(self):
-            binning_factors_to_use = binning_factor
-        elif not isinstance(binning_factor, list) or len(binning_factor) == 2:
-            binning_factors_to_use = [binning_factor] * len(self)
-        else:
-            raise ValueError("Bad binning factor")
-
         fits_array = []
         outputs = Fixer.outputs(output, self)
 
-        for fits, output_fit, binning_factor_to_use in zip(self, outputs, binning_factors_to_use):
+        for fits, output_fit in zip(self, outputs):
             try:
-                binned = fits.bin(binning_factor_to_use, func=func, output=output_fit)
+                binned = fits.bin(binning_factor, func=func, output=output_fit)
                 fits_array.append(binned)
             except ValueError as error:
                 self.logger.info(error)
