@@ -1919,10 +1919,16 @@ class FitsArray(DataArray):
         """
         self.logger.info("Calculating pixels to skys")
 
+        xs_to_use = xs if isinstance(xs, list) else [xs]
+        ys_to_use = ys if isinstance(ys, list) else [ys]
+
+        if len(xs_to_use) != len(ys_to_use):
+            raise ValueError("xs and ys must be equal in length")
+
         skys = []
         for each in self:
             try:
-                skys.append(each.pixels_to_skys(xs, ys))
+                skys.append(each.pixels_to_skys(xs_to_use, ys_to_use))
             except ValueError as error:
                 self.logger.info(error)
             except Unsolvable as error:
