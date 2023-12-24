@@ -1,9 +1,9 @@
-from .error import NumberOfElementError
-from .models import NUMERICS
-from typing import Optional, Union, List, Tuple, Any
-
 import tempfile
 from pathlib import Path, PurePath
+from typing import Optional, Union, List, Tuple, Any
+
+from .error import NumberOfElementError
+from .models import NUMERICS
 
 
 class Fixer:

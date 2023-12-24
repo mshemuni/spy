@@ -1,47 +1,39 @@
 from __future__ import annotations
 
+import math
+import shutil
+from logging import getLogger, Logger
+from pathlib import Path
+from typing import Optional, Union, List, Any, Tuple, Callable
+
+import astroalign
+import numpy as np
+import pandas as pd
+from astropy import units
+from astropy.coordinates import SkyCoord
+from astropy.io import fits as fts
+from astropy.io.fits.header import Header
+from astropy.nddata import CCDData, block_reduce
+from astropy.stats import sigma_clipped_stats
+from astropy.visualization import ZScaleInterval
 from astropy.wcs import WCS
 from astropy.wcs.utils import fit_wcs_from_points
 from astroquery.astrometry_net import AstrometryNet
+from ccdproc import cosmicray_lacosmic, subtract_bias, subtract_dark, flat_correct
+from matplotlib import pyplot as plt
+from mpl_point_clicker import clicker
+from photutils.aperture import CircularAperture, aperture_photometry
+from photutils.detection import DAOStarFinder
+from photutils.utils import calc_total_error
+from scipy import ndimage
+from sep import extract as sep_extract, Background, sum_circle
+from typing_extensions import Self
 
 from .error import NothingToDo, AlignError, NumberOfElementError, OverCorrection, CardNotFound, Unsolvable
 from .models import Data, NUMERICS
 from .utils import Fixer, Check
 
-from logging import getLogger, Logger
-
-import math
-import shutil
-from typing import Optional, Union, List, Any, Tuple, Callable
-
-from photutils.aperture import CircularAperture, aperture_photometry
-from photutils.utils import calc_total_error
-from typing_extensions import Self
-
-import astroalign
-
-from astropy import units
-from astropy.nddata import CCDData, block_reduce
-from astropy.stats import sigma_clipped_stats
-from astropy.visualization import ZScaleInterval
-from photutils.detection import DAOStarFinder
-from astropy.coordinates import SkyCoord
-
-from scipy import ndimage
-
-import numpy as np
-import pandas as pd
-from pathlib import Path
-
-from astropy.io.fits.header import Header
-from astropy.io import fits as fts
-
-from sep import extract as sep_extract, Background, sum_circle
-
-from ccdproc import cosmicray_lacosmic, subtract_bias, subtract_dark, flat_correct
-
-from matplotlib import pyplot as plt
-from mpl_point_clicker import clicker
+__all__ = ["Fits"]
 
 
 class Fits(Data):
@@ -1713,7 +1705,7 @@ class Fits(Data):
         ----------
         binning_factor: Union[int, List[int]]
             binning factor
-        func: Callable[[Any], float], default np.mean
+        func: Callable[[Any], float], default `np.mean`
             the function to be used on merge
         output: str, optional
             Path of the new fits file.
@@ -1810,9 +1802,6 @@ class Fits(Data):
             if not isinstance(sky, SkyCoord):
                 raise Unsolvable("Plate is not solved")
 
-            # self.show()
-            # print(x, y)
-            # print(sky)
             data.append([abs(self), x, y, sky])
 
         return pd.DataFrame(

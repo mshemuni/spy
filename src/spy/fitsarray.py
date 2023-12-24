@@ -1,34 +1,30 @@
 from __future__ import annotations
 
-from .error import NumberOfElementError, OverCorrection, Unsolvable
-from .models import DataArray, NUMERICS
-from .fits import Fits
-from .utils import Fixer, Check
-
-import astroalign
-from astropy.wcs import WCS
-from astropy.wcs.utils import fit_wcs_from_points
-
-from logging import getLogger, Logger
-
 from glob import glob
-
-import pandas as pd
-import numpy as np
-
-from astropy.nddata import CCDData
-from ccdproc import Combiner
-from astropy.visualization import ZScaleInterval
-from matplotlib import pyplot as plt, animation
-from sep import Background
-
-from typing_extensions import Self
-
+from logging import getLogger, Logger
 from pathlib import Path
 from typing import List, Union, Any, Optional, Iterator, Dict, Callable
 
-from astropy.io.fits.header import Header
+import astroalign
+import numpy as np
+import pandas as pd
 from astropy.coordinates import SkyCoord
+from astropy.io.fits.header import Header
+from astropy.nddata import CCDData
+from astropy.visualization import ZScaleInterval
+from astropy.wcs import WCS
+from astropy.wcs.utils import fit_wcs_from_points
+from ccdproc import Combiner
+from matplotlib import pyplot as plt, animation
+from sep import Background
+from typing_extensions import Self
+
+from .error import NumberOfElementError, OverCorrection, Unsolvable
+from .fits import Fits
+from .models import DataArray, NUMERICS
+from .utils import Fixer, Check
+
+__all__ = ["FitsArray"]
 
 
 class FitsArray(DataArray):
@@ -1023,7 +1019,7 @@ class FitsArray(DataArray):
         ----------
         binning_factor: Union[int, List[Union[int, List[int]]]]
             Binning factor
-        func: Callable[[Any], float], default np.mean
+        func: Callable[[Any], float], default `np.mean`
             the function to be used on merge
         output: str, optional
             New path to save the files.
@@ -1922,12 +1918,20 @@ class FitsArray(DataArray):
 
         """
         self.logger.info("Calculating pixels to skys")
-        return pd.concat(
-            [
-                each.pixels_to_skys(xs, ys)
-                for each in self
-            ]
-        )
+
+        skys = []
+        for each in self:
+            try:
+                skys.append(each.pixels_to_skys(xs, ys))
+            except ValueError as error:
+                self.logger.info(error)
+            except Unsolvable as error:
+                self.logger.info(error)
+
+        if len(skys) == 0:
+            raise Unsolvable("None of images were solvable")
+
+        return pd.concat(skys)
 
     def skys_to_pixels(self, skys: Union[List[SkyCoord], SkyCoord]) -> pd.DataFrame:
         """
@@ -1951,9 +1955,15 @@ class FitsArray(DataArray):
         """
         self.logger.info("Calculating skys to pixels")
 
-        return pd.concat(
-            [
-                each.skys_to_pixels(skys)
-                for each in self
-            ]
-        )
+        pixels = []
+
+        for each in self:
+            try:
+                pixels.append(each.skys_to_pixels(skys))
+            except Unsolvable as error:
+                self.logger.info(error)
+
+        if len(pixels) == 0:
+            raise Unsolvable("None of images were solvable")
+
+        return pd.concat(pixels)
