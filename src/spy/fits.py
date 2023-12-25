@@ -37,6 +37,8 @@ __all__ = ["Fits"]
 
 
 class Fits(Data):
+    high_precision = False
+
     def __init__(self, file: Path, logger: Optional[Logger] = None) -> None:
 
         self.logger = getLogger(f"{self.__class__.__name__}") if logger is None else logger
@@ -228,8 +230,13 @@ class Fits(Data):
             when the file does exist and `override` is `False`
         """
         new_output = Fixer.output(output=output, override=override)
-        fts.writeto(new_output, data, header=header)
+
+        if not cls.high_precision:
+            data = data.astype(np.uint)
+
+        fts.writeto(new_output, data, header=header, output_verify="silentfix")
         fits = cls.from_path(new_output)
+
         fits.is_temp = output is None
         return fits
 

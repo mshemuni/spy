@@ -28,6 +28,8 @@ __all__ = ["FitsArray"]
 
 
 class FitsArray(DataArray):
+    high_precision = False
+
     def __init__(self, fits_list: List[Fits], logger: Optional[Logger] = None) -> None:
 
         self.logger = getLogger(f"{self.__class__.__name__}") if logger is None else logger
@@ -153,7 +155,9 @@ class FitsArray(DataArray):
         files = []
         for each in map(Path, paths):
             try:
-                files.append(Fits(each))
+                Fits.high_precision = cls.high_precision
+                fits = Fits(each)
+                files.append(fits)
             except FileNotFoundError:
                 pass
 
@@ -200,6 +204,7 @@ class FitsArray(DataArray):
         fits_objects = []
         for i in range(numer_of_samples):
             try:
+                Fits.high_precision = cls.high_precision
                 f = Fits.sample()
                 shifted = f.shift(i * 10, i * 10)
                 fits_objects.append(shifted)

@@ -18,6 +18,7 @@ from spy.error import NothingToDo, OverCorrection, NumberOfElementError, Unsolva
 
 class TestFits(unittest.TestCase):
     def setUp(self):
+        Fits.high_precision = True
         self.SAMPLE = Fits.sample()
 
     def test___str__(self):

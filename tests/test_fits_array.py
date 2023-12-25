@@ -18,6 +18,7 @@ from spy.error import NumberOfElementError, Unsolvable
 
 class TestFitsArray(unittest.TestCase):
     def setUp(self):
+        FitsArray.high_precision = True
         self.SAMPLE = FitsArray.sample()
         self.SAMPLE.hedit("EXPOSURE", 65)
 
