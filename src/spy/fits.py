@@ -232,7 +232,8 @@ class Fits(Data):
         new_output = Fixer.output(output=output, override=override)
 
         if not cls.high_precision:
-            data = data.astype(np.uint)
+            data_type = Fixer.smallest_data_type(data)
+            data = data.astype(data_type)
 
         fts.writeto(new_output, data, header=header, output_verify="silentfix")
         fits = cls.from_path(new_output)

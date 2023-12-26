@@ -2,11 +2,38 @@ import tempfile
 from pathlib import Path, PurePath
 from typing import Optional, Union, List, Tuple, Any
 
+import numpy as np
+
 from .error import NumberOfElementError
 from .models import NUMERICS
 
 
 class Fixer:
+    @staticmethod
+    def smallest_data_type(data: Any) -> Any:
+        """
+        Returns the smallest data type for the give array without data loss.
+
+        stolen from: https://stackoverflow.com/questions
+
+        Parameters
+        ----------
+        data : Any
+            the data
+
+        Returns
+        -------
+        Any
+            the smallest data type for the give array
+        """
+        arr_min = data.min()
+        arr_max = data.max()
+        for data_type in ["u1", "i1", "u2", "i2", "u4", "i4", "u8", "i8"]:
+            iinfo = np.iinfo(np.dtype(data_type))
+            if arr_min >= int(iinfo.min) and arr_max <= int(iinfo.max):
+                return np.dtype(data_type)
+
+        return np.dtype(np.uint)
 
     @staticmethod
     def key_value_pair(keys: Union[str, List[str]],
