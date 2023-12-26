@@ -1147,7 +1147,7 @@ class Fits(Data):
                 options = {"dark_exposure": 1 * units.s,
                            "data_exposure": 1 * units.s}
             else:
-                if exposure not in master_dark.header() or \
+                if exposure not in self.header() or \
                         exposure not in master_dark.header():
                     self.logger.error(f"Key {exposure} not found in file, master_dark or both")
                     raise CardNotFound(f"Key {exposure} not found in file, master_dark or both")
@@ -1215,6 +1215,79 @@ class Fits(Data):
 
         self.logger.error("This Data is already flat corrected")
         raise OverCorrection("This Data is already flat corrected")
+
+    def ccdproc(self, master_zero: Optional[Self] = None, master_dark: Optional[Self] = None,
+                master_flat: Optional[Self] = None, exposure: Optional[str] = None, output: Optional[str] = None,
+                override: bool = False, force: bool = False) -> Self:
+        """
+        Does ccdproc correction of the data. can be zero, dark, or flat in any combination
+
+        Parameters
+        ----------
+        master_zero : Optional[Self]
+            Zero file to be used for correction
+        master_dark : Optional[Self]
+            Dark file to be used for correction
+        master_flat : Optional[Self]
+            Flat file to be used for correction
+        exposure : str, optional
+            header card containing exptime
+        output: str, optional
+            Path of the new fits file.
+        override: bool, default=False
+            If True will overwrite the output if a file is already exists.
+        force: bool, default=False
+            Overcorrection flag
+
+        Returns
+        -------
+        Self
+            ccd corrected `Fits` object
+        """
+        self.logger.info("Making ccd correction on the image")
+
+        if all(each is None for each in [master_zero, master_dark, master_flat]):
+            raise NothingToDo("None of master Zero, Dark, or Flat is not provided")
+
+        corrected = self.ccd()
+        header = self.pure_header()
+        if master_zero:
+            if "SPY_ZERO" not in self.header() or force:
+                corrected = subtract_bias(corrected, master_zero.ccd())
+                header["SPY_ZERO"] = master_zero.file.name
+
+        if master_dark:
+            if "SPY_DARK" not in self.header() or force:
+                if exposure is None:
+                    options = {"dark_exposure": 1 * units.s,
+                               "data_exposure": 1 * units.s}
+                else:
+                    if exposure not in self.header() or \
+                            exposure not in master_dark.header():
+                        self.logger.error(f"Key {exposure} not found in file, master_dark or both")
+                        raise CardNotFound(f"Key {exposure} not found in file, master_dark or both")
+
+                    options = {
+                        "dark_exposure": float(
+                            master_dark.header()[exposure].values[0]) * units.s,
+                        "data_exposure": float(
+                            self.header()[exposure].values[0]) * units.s
+                    }
+                corrected = subtract_dark(
+                    corrected, master_dark.ccd(),
+                    **options, scale=True
+                )
+                header["SPY_DARK"] = master_dark.file.name
+
+        if master_flat:
+            if "SPY_FLAT" not in self.header() or force:
+                corrected = flat_correct(corrected, master_flat.ccd())
+                header["SPY_FLAT"] = master_flat.file.name
+
+        return self.__class__.from_data_header(
+            corrected.data, header=header,
+            output=output, override=override
+        )
 
     def background(self) -> Background:
         """

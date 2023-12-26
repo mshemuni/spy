@@ -19,7 +19,7 @@ from matplotlib import pyplot as plt, animation
 from sep import Background
 from typing_extensions import Self
 
-from .error import NumberOfElementError, OverCorrection, Unsolvable
+from .error import NumberOfElementError, OverCorrection, Unsolvable, NothingToDo
 from .fits import Fits
 from .models import DataArray, NUMERICS
 from .utils import Fixer, Check
@@ -1314,6 +1314,53 @@ class FitsArray(DataArray):
                                                       output=output_fit,
                                                       force=force)
                 fits_array.append(flat_corrected)
+            except OverCorrection:
+                fits_array.append(fits)
+            except Exception as error:
+                self.logger.error(error)
+
+        return self.__class__(fits_array)
+
+    def ccdproc(self, master_zero: Optional[Fits] = None, master_dark: Optional[Fits] = None,
+                master_flat: Optional[Fits] = None, exposure: Optional[str] = None, output: Optional[str] = None,
+                force: bool = False) -> Self:
+        """
+        Does ccd correction of the data
+
+        Parameters
+        ----------
+        master_zero : Optional[Fits]
+            Zero file to be used for correction
+        master_dark : Optional[Fits]
+            Dark file to be used for correction
+        master_flat : Optional[Fits]
+            Flat file to be used for correction
+        exposure : str, optional
+            header card containing exptime
+        output: Optional[str]
+            New path to save the files.
+        force: bool, default=False
+            Overcorrection flag
+
+        Returns
+        -------
+        Self
+            ccd corrected `FitsArray` object
+        """
+        self.logger.info("Making ccd correction on the image")
+
+        if all(each is None for each in [master_zero, master_dark, master_flat]):
+            raise NothingToDo("None of master Zero, Dark, or Flat is not provided")
+
+        fits_array = []
+        outputs = Fixer.outputs(output, self)
+        for fits, output_fit in zip(self, outputs):
+            try:
+                ccd_corrected = fits.ccdproc(
+                    master_zero=master_zero, master_dark=master_dark, master_flat=master_flat,
+                    exposure=exposure, output=output_fit, force=force
+                )
+                fits_array.append(ccd_corrected)
             except OverCorrection:
                 fits_array.append(fits)
             except Exception as error:

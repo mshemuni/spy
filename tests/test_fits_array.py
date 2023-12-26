@@ -13,7 +13,7 @@ import numpy as np
 
 from astropy.io.fits.header import Header
 
-from spy.error import NumberOfElementError, Unsolvable
+from spy.error import NumberOfElementError, Unsolvable, NothingToDo
 
 
 class TestFitsArray(unittest.TestCase):
@@ -1549,6 +1549,36 @@ class TestFitsArray(unittest.TestCase):
                     division[~np.isnan(division)][0]
                 )
             )
+
+    def test_ccdproc(self):
+        new_fits_array = self.SAMPLE.ccdproc(
+            master_zero=self.SAMPLE[0],
+            master_dark=self.SAMPLE[0],
+            master_flat=self.SAMPLE[0]
+        )
+        self.assertIsInstance(new_fits_array, FitsArray)
+
+    def test_ccdproc_only_zero(self):
+        new_fits_array = self.SAMPLE.ccdproc(
+            master_zero=self.SAMPLE[0]
+        )
+        self.assertIsInstance(new_fits_array, FitsArray)
+
+    def test_ccdproc_only_dark(self):
+        new_fits_array = self.SAMPLE.ccdproc(
+            master_dark=self.SAMPLE[0]
+        )
+        self.assertIsInstance(new_fits_array, FitsArray)
+
+    def test_ccdproc_only_flat(self):
+        new_fits_array = self.SAMPLE.ccdproc(
+            master_flat=self.SAMPLE[0]
+        )
+        self.assertIsInstance(new_fits_array, FitsArray)
+
+    def test_ccdproc_nothing_to_do(self):
+        with self.assertRaises(NothingToDo):
+            _ = self.SAMPLE.ccdproc()
 
     def test_background(self):
         list_of_background = self.SAMPLE.background()

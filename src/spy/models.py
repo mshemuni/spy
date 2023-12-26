@@ -155,6 +155,12 @@ class Data(ABC):
         ...
 
     @abstractmethod
+    def ccdproc(self, master_zero: Optional[Self] = None, master_dark: Optional[Self] = None,
+                master_flat: Optional[Self] = None, exposure: Optional[str] = None, output: Optional[str] = None,
+                override: bool = False, force: bool = False) -> Self:
+        ...
+
+    @abstractmethod
     def background(self) -> Background:
         ...
 
@@ -376,6 +382,12 @@ class DataArray(ABC):
     @abstractmethod
     def flat_correction(self, master_flat: Fits,
                         output: Optional[str] = None, force: bool = False) -> Self:
+        ...
+
+    @abstractmethod
+    def ccdproc(self, master_zero: Optional[Fits] = None, master_dark: Optional[Fits] = None,
+                master_flat: Optional[Fits] = None, exposure: Optional[str] = None, output: Optional[str] = None,
+                force: bool = False) -> Self:
         ...
 
     @abstractmethod

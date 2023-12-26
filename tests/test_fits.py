@@ -955,6 +955,36 @@ class TestFits(unittest.TestCase):
             self.SAMPLE.data().shape[1] // 10, binned.data().shape[1]
         )
 
+    def test_ccdproc(self):
+        corrected = self.SAMPLE.ccdproc(
+            master_zero=self.SAMPLE,
+            master_dark=self.SAMPLE,
+            master_flat=self.SAMPLE
+        )
+        self.assertIsInstance(corrected, Fits)
+
+    def test_ccdproc_only_zero(self):
+        corrected = self.SAMPLE.ccdproc(
+            master_zero=self.SAMPLE
+        )
+        self.assertIsInstance(corrected, Fits)
+
+    def test_ccdproc_only_dark(self):
+        corrected = self.SAMPLE.ccdproc(
+            master_dark=self.SAMPLE
+        )
+        self.assertIsInstance(corrected, Fits)
+
+    def test_ccdproc_only_flat(self):
+        corrected = self.SAMPLE.ccdproc(
+            master_flat=self.SAMPLE
+        )
+        self.assertIsInstance(corrected, Fits)
+
+    def test_ccdproc_nothing_to_do(self):
+        with self.assertRaises(NothingToDo):
+            _ = self.SAMPLE.ccdproc()
+
 
 if __name__ == '__main__':
     unittest.main()
